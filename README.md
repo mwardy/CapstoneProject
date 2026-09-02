@@ -7,4 +7,4 @@ The capstone project involves using Bayesian Optimisation to find the maximum va
 
 Module 12 (Week 1)
 
-
+For the first week, I plan to begin by exploring and visualising the 10 initial observations for each of the eight functions to understand the distribution of the inputs and outputs. I will then build Gaussian Process surrogate models and test different optimisation setups, comparing approaches such as RBF and Matérn kernels combined with UCB and Expected Improvement (EI) acquisition functions. This will allow me to assess how sensitive the suggested query points are to different modelling choices and identify which approaches appear most suitable for each function. I will then use these results, alongside the balance between exploration and exploitation, to select the first new query point for each function. The outputs received from these queries will then be added to the existing data and used to update and refine the models in the following week.
