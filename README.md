@@ -19,7 +19,7 @@ The capstone project involves using Bayesian Optimisation to find the maximum va
 
 **Methodology**
 
-**1. Search for highest and lowest observed output and note the corresponding input**
+**Step 1. Search for highest and lowest observed output and note the corresponding input**
 
 Function 1:
 Highest observed output:  
@@ -145,7 +145,7 @@ x7        0.490827
 x8        0.313683  
 output    5.592193  
 
-**2. Fit RBF Gaussian Processes**
+**Step 2. Fit RBF Gaussian Processes**
 
 Functions 1, 5 and 6 produced convergence warnings because the optimised RBF length scale reached its lower bound, suggesting the GP was modelling very rapid changes in output; the model predictions and uncertainty will therefore be checked before using them to select new query points.
 - If we relax the lower bound, does the model simply push the length scale even closer to zero, or does it settle at a sensible value?
@@ -157,7 +157,7 @@ After checking:
 
 The convergence warnings were investigated by relaxing the RBF length-scale bounds. Function 5 converged to a stable length scale, while Functions 1 and 6 continued to converge to the minimum value, so their original Gaussian Process models were retained for the initial optimisation.
 
-**3. Generate Candidate Points and Predict Mean + Uncertainty**
+**Step 3. Generate Candidate Points and Predict Mean + Uncertainty**
 
 Function 1:  
 Dimensions: 2  
@@ -207,8 +207,63 @@ Candidate points: 100000
 Predicted output range: 5.286512 to 10.217038  
 Uncertainty range: 0.064678 to 0.681040  
 
-**Overview**
+**Overview**  
 Functions 1 and 6 showed an issue caused by their extremely small RBF length scales. For these functions, the Gaussian Process produced almost identical predictions and uncertainty across all 100,000 candidate points, suggesting that it was treating almost all unobserved points as unrelated to the existing observations. As a result, UCB would be unable to meaningfully distinguish between candidate points for these two functions. Functions 2, 3, 4, 5, 7 and 8 showed variation in both predicted outputs and uncertainty and could therefore proceed normally with UCB.
+
+**Step 4. Calculate UCB**
+- Using UCB to combine predicted mean and uncertainty.
+
+Function 1:  
+Selected point: [0.77395605 0.43887844]  
+Predicted output: -0.00036060626443627054  
+Uncertainty: 0.0010818187933090686  
+UCB: 0.002343940718836401  
+
+Function 2:  
+Selected point: [0.8217782  0.98030138]  
+Predicted output: 0.5373024810236847  
+Uncertainty: 0.17485188463025975  
+UCB: 0.9744321925993341  
+
+Function 3:  
+Selected point: [0.40949935 0.39899996 0.51948667]  
+Predicted output: -0.04187059316125945  
+Uncertainty: 0.07197438103562513  
+UCB: 0.1380653594278034  
+
+Function 4:  
+Selected point: [0.39915655 0.43320344 0.35769894 0.461233]  
+Predicted output: -1.109357344181845  
+Uncertainty: 0.9929487520649243  
+UCB: 1.3730145359804657  
+
+Function 5:  
+Selected point: [0.35226763 0.85495745 0.92921014 0.99954104]  
+Predicted output: 1003.7100993151818  
+Uncertainty: 139.19689039784117  
+UCB: 1351.7023253097846  
+
+Function 6:  
+Selected point: [0.42871117 0.38510403 0.39053256 0.72350556 0.95165422]  
+Predicted output: -1.4953899396939465  
+Uncertainty: 0.44899959039781934  
+UCB: -0.3728909636993982  
+
+Function 7:  
+Selected point: [0.12062732 0.40392121 0.37997272 0.14653261 0.33585285 0.76330458]  
+Predicted output: 1.136196501448108  
+Uncertainty: 0.1932559409633074  
+UCB: 1.6193363538563763  
+
+Function 8:   
+Selected point: [0.24339702 0.03611478 0.07835798 0.05372058 0.78385373 0.27839289 0.03494745 0.42903195]  
+Predicted output: 10.015345100551379  
+Uncertainty: 0.5079509989217438  
+UCB: 11.285222597855737  
+
+**Overall**
+UCB was calculated for each of the 100,000 candidate points using a κ value of 2.5, combining the GP’s predicted output with its uncertainty. The candidate with the highest UCB was selected for each function, allowing points with either strong predicted performance, high uncertainty, or a combination of both to be prioritised. This provided a balance between exploiting promising areas and exploring less certain regions of the search space. Functions 1 and 6 remained problematic because their near-constant predictions and uncertainty resulted in an almost flat UCB surface, meaning their selected points could not yet be considered reliable.
+
 
 **Module 13**
 
