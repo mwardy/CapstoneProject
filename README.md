@@ -22,10 +22,10 @@ The capstone project involves using Bayesian Optimisation to find the maximum va
 **1. Search for highest and lowest observed output and note the corresponding input**
 
 Function 1:
-Highest observed output:
-x1        7.310236e-01
-x2        7.329999e-01
-output    7.710875e-16
+Highest observed output:  
+x1        7.310236e-01  
+x2        7.329999e-01  
+output    7.710875e-16  
 
 Lowest observed output:
 x1        0.650114
