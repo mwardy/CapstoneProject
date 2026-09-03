@@ -26,7 +26,7 @@ Highest observed output:
 x1        7.310236e-01  
 x2        7.329999e-01  
 output    7.710875e-16  
-
+  
 Lowest observed output:  
 x1        0.650114  
 x2        0.681526  
