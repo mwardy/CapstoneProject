@@ -1,11 +1,11 @@
-# CapstoneProject
+# Capstone Project
 **Capstone project for Imperial AI/ML Course**
 
-**Objective**
+**Overall Objective**
 
 The capstone project involves using Bayesian Optimisation to find the maximum values of eight unknown functions. It begins with 10 known data points for each function, which are used to build an initial model and select the first new query point. The functions have different numbers of input dimensions, meaning that some have relatively simple search spaces while others have many more possible combinations of inputs to explore. As the number of dimensions increases, the search space becomes more complex, making it more difficult to identify promising areas from the limited observations available. This means that the balance between exploring uncertain areas and exploiting areas that already appear promising may differ between functions. Each week, one additional data point is received for each function based on the queries submitted, allowing the models to be updated with more information. As the project progresses, the aim is to use this growing dataset to improve the models and make increasingly informed decisions about where to query next. Overall, the project demonstrates how an iterative optimisation approach can gradually improve its understanding of unknown problems of varying complexity and move towards better solutions.
 
-**Methodology**
+**Hypothetic Methodology**
 
 - Examine the initial data — Check the inputs and outputs for each function, including the number of dimensions, highest and lowest observed outputs, and output range.
 - Fit a Gaussian Process — Train an RBF Gaussian Process for each function using the existing input-output observations.
@@ -158,6 +158,7 @@ After checking:
 The convergence warnings were investigated by relaxing the RBF length-scale bounds. Function 5 converged to a stable length scale, while Functions 1 and 6 continued to converge to the minimum value, so their original Gaussian Process models were retained for the initial optimisation.
 
 **Step 3. Generate Candidate Points and Predict Mean + Uncertainty**
+For each function, 100,000 candidate points were randomly generated across the permitted input space between 0 and 1. The fitted Gaussian Process was then used to estimate the predicted mean output and uncertainty for each candidate. This provides an indication of both how well each unobserved point is expected to perform and how confident the model is in that prediction.
 
 Function 1:  
 Dimensions: 2  
@@ -211,7 +212,7 @@ Uncertainty range: 0.064678 to 0.681040
 Functions 1 and 6 showed an issue caused by their extremely small RBF length scales. For these functions, the Gaussian Process produced almost identical predictions and uncertainty across all 100,000 candidate points, suggesting that it was treating almost all unobserved points as unrelated to the existing observations. As a result, UCB would be unable to meaningfully distinguish between candidate points for these two functions. Functions 2, 3, 4, 5, 7 and 8 showed variation in both predicted outputs and uncertainty and could therefore proceed normally with UCB.
 
 **Step 4. Calculate UCB**
-- Using UCB to combine predicted mean and uncertainty.
+The predicted outputs and uncertainty were combined using the Upper Confidence Bound (UCB) acquisition function, with κ set to 2.5 to provide a balance between exploitation and exploration. UCB was calculated for each of the 100,000 candidate points, and the point with the highest score was selected as the proposed query. This allows both points with high predicted outputs and uncertain areas with potential for improvement to be considered.
 
 Function 1:  
 Selected point: [0.77395605 0.43887844]  
@@ -264,7 +265,84 @@ UCB: 11.285222597855737
 **Overall**
 UCB was calculated for each of the 100,000 candidate points using a κ value of 2.5, combining the GP’s predicted output with its uncertainty. The candidate with the highest UCB was selected for each function, allowing points with either strong predicted performance, high uncertainty, or a combination of both to be prioritised. This provided a balance between exploiting promising areas and exploring less certain regions of the search space. Functions 1 and 6 remained problematic because their near-constant predictions and uncertainty resulted in an almost flat UCB surface, meaning their selected points could not yet be considered reliable.
 
+**Step 5. Handling Functions 1 and 6**
 
-**Module 13**
+For Functions 1 and 6, the RBF Gaussian Process produced extremely small length scales, resulting in almost identical predictions and uncertainty across the candidate search space. As UCB was therefore unable to meaningfully distinguish between candidate points, an exploration-based approach will be used instead. A point will be selected from a relatively unexplored area of the search space to provide the model with new information.
+
+Once the output from this query is received, it will be added to the existing observations and the RBF model reassessed. In future iterations/weeks of the project, an alternative kernel (e.g. Matérn) could also be introduced and compared with RBF to determine whether it provides a more suitable representation of these functions. 
+
+As the GP models for Functions 1 and 6 were unable to identify more promising areas through their predictions or uncertainty, the aim was to maximise the information gained from the next query rather than immediately target a higher output. Selecting a point far from the existing observations reduces duplication of the areas already sampled and provides information about a new part of the search space. This represents a deliberately exploration-focused decision, which can then be reassessed once the new output is received.
+
+Function 1:  
+Selected exploration point: [0.00124268 0.99691888]  
+Distance to nearest existing observation: 0.39492227534104346  
+
+Function 6:  
+Selected exploration point: [0.91049992 0.03922596 0.99959186 0.08178911 0.93948142]  
+Distance to nearest existing observation: 0.8860560302850456  
+
+Using this exploration-based approach, Function 1 selected the point [0.001243, 0.996919], which was approximately 0.395 from its nearest existing observation. Function 6 selected [0.910500, 0.039226, 0.999592, 0.081789, 0.939481], approximately 0.886 from its nearest existing observation. These represented the most unexplored candidates identified from the 100,000 points tested. As the GP and UCB could not meaningfully differentiate between candidates for these functions, the aim was to maximise the information gained from the next query rather than immediately exploit an area predicted to have a high output.
+
+**Step 6. Assessing Selected Query Points**
+
+The proposed query points were compared with the current highest-performing observations to assess how the optimisation strategy was navigating each search space. For Functions 2, 3, 4, 5 and 7, the selected points remained relatively close to the current best observations, suggesting that UCB retained an exploitation component by searching around promising regions. Function 8 selected a substantially more distant point, indicating greater exploration within its higher-dimensional search space. Functions 1 and 6 also selected distant points, although this was intentional because an exploration-based strategy had been adopted following the limitations identified with their RBF models.
+
+Function 1:  
+Current best point: [0.731024 0.733   ]  
+Current best output: 7.710875114502849e-16  
+Proposed new point: [0.001243 0.996919]  
+Distance from current best: 0.776  
+
+Function 2:  
+Current best point: [0.702637 0.926564]  
+Current best output: 0.6112052157614438  
+Proposed new point: [0.821778 0.980301]  
+Distance from current best: 0.1307  
+
+Function 3:  
+Current best point: [0.492581 0.611593 0.340176]  
+Current best output: -0.034835313350078584  
+Proposed new point: [0.409499 0.399    0.519487]  
+Distance from current best: 0.2903  
+
+Function 4:  
+Current best point: [0.577766 0.428772 0.425826 0.249007]  
+Current best output: -4.025542281908162  
+Proposed new point: [0.399157 0.433203 0.357699 0.461233]  
+Distance from current best: 0.2857  
+
+Function 5:  
+Current best point: [0.224189 0.84648  0.879484 0.878516]  
+Current best output: 1088.8596181962705  
+Proposed new point: [0.352268 0.854957 0.92921  0.999541]  
+Distance from current best: 0.1833  
+
+Function 6:  
+Current best point: [0.728186 0.154693 0.732552 0.693997 0.056401]  
+Current best output: -0.7142649478202404  
+Proposed new point: [0.9105   0.039226 0.999592 0.081789 0.939481]  
+Distance from current best: 1.1281  
+
+Function 7:  
+Current best point: [0.057896 0.491672 0.247422 0.218118 0.420428 0.73097 ]  
+Current best output: 1.3649683044991994  
+Proposed new point: [0.120627 0.403921 0.379973 0.146533 0.335853 0.763305]  
+Distance from current best: 0.2062  
+
+Function 8:  
+Current best point: [0.056447 0.065956 0.022929 0.038786 0.403935 0.801055 0.488307 0.893085]  
+Current best output: 9.598482002566342  
+Proposed new point: [0.243397 0.036115 0.078358 0.053721 0.783854 0.278393 0.034947 0.429032]  
+Distance from current best: 0.9368  
+
+**Week 1 Process:**
+- Examined the initial observations.
+- Fitted the RBF Gaussian Processes.
+- Generated 100,000 candidate points and predicted mean + uncertainty.
+- Used UCB (κ = 2.5) to select points for Functions 2, 3, 4, 5, 7 and 8.
+- Used deliberate exploration for Functions 1 and 6 because their GP/UCB surfaces were effectively flat.
+- Sense-checked the proposed points against the current best observations.
+
+**Module 13 (Week 2)**
 
 **Methodology**
