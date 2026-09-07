@@ -1150,3 +1150,17 @@ F6: linear SVM-informed selection
 F7: GP + UCB  
 F8: GP + UCB  
 
+
+
+
+
+
+
+
+
+So far:
+
+Week 1: establish GP + UCB baseline.
+Week 2: diagnose individual functions and adapt where the GP struggles.
+Week 3: introduce SVMs and use them where they genuinely add information.
+Week 4: investigate whether different κ values improve the exploration–exploitation balance for individual functions.
