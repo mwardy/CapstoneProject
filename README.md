@@ -938,30 +938,215 @@ Function 6: The latest query produced a new best output, but the refitted RBF GP
 Function 7: A balanced UCB approach will be retained. The latest query did not improve the current maximum, but the GP remains usable and both SVM models showed reasonably good classification performance without a clear advantage for either.  
 Function 8: A balanced UCB approach will also be retained. The latest output was relatively close to the current best, the GP remains stable, and both SVM models performed strongly, suggesting useful structure without providing a clear reason to replace the existing optimisation approach.  
   
-Function  Latest_Query_Improved  GP_Usable  Linear_SVM_Accuracy  RBF_SVM_Accuracy           Proposed_Strategy
-        1                  False      False                0.167             0.500                 Exploration
-        2                  False       True                0.667             0.833                Balanced UCB
-        3                  False       True                0.344             0.522                Balanced UCB
-        4                  False       True                0.627             0.782 UCB / moderate exploitation
-        5                   True       True                0.649             0.458        Greater exploitation
-        6                   True      False                0.821             0.768  SVM-informed / exploration
-        7                  False       True                0.785             0.815                Balanced UCB
-        8                  False       True                0.857             0.833                Balanced UCB
+**Step 5. Select the third-round queries**
 
+The third-round query points were selected using the function-specific strategies identified in Step 4. For Functions 2, 3, 4, 5, 7 and 8, the existing Gaussian Process and UCB approach was retained with κ = 2.5, allowing predicted performance and uncertainty to jointly determine the preferred candidate. Function 1 was treated separately using maximum-distance exploration because its GP remained unreliable and the SVM analysis provided little useful guidance. Function 6 was also treated separately because its refitted GP produced identical predictions and uncertainty across the candidate space, making UCB unable to meaningfully rank candidates. For this function, the SVM results will instead be investigated as an additional source of guidance. All proposed points will be inspected before final selection rather than automatically accepted.
 
+**Step 5a. GP + UCB for Functions 2, 3, 4, 5, 7 and 8**
 
+Function 2:   
+Selected point: [0.70962749 0.88195252]  
+Predicted output: 0.449335  
+Uncertainty:      0.185666  
+UCB:              0.913500  
 
+Function 3:  
+Selected point: [0.73203545 0.99729984 0.01565321]  
+Predicted output: -0.076907  
+Uncertainty:      0.077556  
+UCB:              0.116983  
 
+Function 4:  
+Selected point: [0.3919759  0.42475707 0.49482291 0.46442447]  
+Predicted output: -0.064270  
+Uncertainty:      0.420976  
+UCB:              0.988170  
 
+Function 5:  
+Selected point: [0.67162912 0.98111794 0.99045818 0.98518882]  
+Predicted output: 2631.682259  
+Uncertainty:      240.331386  
+UCB:              3232.510725  
 
+Function 7:  
+Selected point: [0.02154929 0.31333367 0.36021627 0.14173151 0.29532786 0.68654814]  
+Predicted output: 1.662117  
+Uncertainty:      0.258204  
+UCB:              2.307626  
+  
+Function 8:   
+Selected point: [0.02552911 0.45123759 0.09820892 0.03139148 0.4124209  0.13857332 0.11493429 0.99436062]  
+Predicted output: 9.635913  
+Uncertainty:      0.434286  
+UCB:              10.721628  
 
+Things that stand out:  
+- F2 looks quite exploitative. Its proposed point is close in x-space to the existing best [0.702637, 0.926564].  
+- F3 looks much more exploratory. UCB is accepting a fairly mediocre predicted mean in exchange for uncertainty.  
+- F4 looks particularly interesting: predicted output is −0.064, substantially better than our observed best of −0.301, although there is considerable uncertainty. This looks like a promising UCB candidate.  
+- F5 is doing what we hoped. It remains around the high-performing region, with x2–x4 all very high. Its predicted output of 2631.68 is below the observed best of 2765.82, but uncertainty raises its UCB to 3232.51. So we're exploiting the region while still moving into an untested part of it.  
+- F7 appears to remain around the general area where we've previously found strong outputs.  
+- F8 has relatively high uncertainty, so UCB seems to be giving exploration more weight.
 
+**Step 5b — Compare with the current best points**
 
+Function 2:     
+Current best point: [0.702637 0.926564]  
+Current best output: 0.611205  
 
+Proposed new point: [0.709627 0.881953]  
+Distance from current best: 0.0452  
 
+Function 3:  
+Current best point: [0.409499 0.399    0.519487]  
+Current best output: -0.020167  
 
+Proposed new point: [0.732035 0.9973   0.015653]  
+Distance from current best: 0.8461  
 
+Function 4:  
+Current best point: [0.399157 0.433203 0.357699 0.461233]  
+Current best output: -0.300645  
 
+Proposed new point: [0.391976 0.424757 0.494823 0.464424]  
+Distance from current best: 0.1376  
 
+Function 5:   
+Current best point: [0.514842 0.856105 0.961506 0.998492]  
+Current best output: 2765.819787  
 
+Proposed new point: [0.671629 0.981118 0.990458 0.985189]  
+Distance from current best: 0.2030  
+
+Function 7:  
+Current best point: [0.120627 0.403921 0.379973 0.146533 0.335853 0.763305]  
+Current best output: 1.950612  
+
+Proposed new point: [0.021549 0.313334 0.360216 0.141732 0.295328 0.686548]  
+Distance from current best: 0.1612  
+  
+Function 8:   
+Current best point: [0.243397 0.036115 0.078358 0.053721 0.783854 0.278393 0.034947 0.429032]  
+Current best output: 9.821986  
+
+Proposed new point: [0.025529 0.451238 0.098209 0.031391 0.412421 0.138573 0.114934 0.994361]  
+Distance from current best: 0.8392  
+
+Useful observations:
+- F4 looks very promising. It's only 0.138 from the current best, and the GP predicts −0.064, compared with the observed best of −0.301. There is uncertainty around that prediction, but that's exactly what UCB is designed to account for.
+- F5 also passes our check. A distance of 0.203 in four dimensions isn't extremely close, but it's clearly still exploiting the broader high-performing region. In particular, the proposed values for x2–x4 remain very high, consistent with the area that gave us 2329 → 2766.
+- F3 and F8 are the exploratory ones. Distances of 0.846 and 0.839 are substantial, but that's not inherently bad — their UCB scores are telling us the uncertainty makes those regions worth testing.
+
+The distances from the current best observations showed that UCB was naturally producing different exploration–exploitation behaviour across the functions. Functions 2, 4 and 7 remained relatively close to their current best points, indicating greater exploitation of known promising regions. Function 5 also remained reasonably close to its latest best observation, which is consistent with the decision to continue exploiting the region that has produced successive improvements. In contrast, Functions 3 and 8 selected substantially more distant points, indicating greater exploration driven by model uncertainty. This variation supports retaining κ = 2.5, as the same acquisition setting is already adapting the balance between exploration and exploitation according to each function's GP predictions and uncertainty.
+
+**Step 5c. Function 1**
+
+Planned strategy was maximum-distance exploration because:  
+- RBF is still hitting its lower length-scale bound.  
+- The GP remains questionable.  
+- Neither SVM provided convincing guidance.  
+- Last week's exploratory point didn't find an improvement.
+
+Function 1:  
+Selected point: [4.50627487e-05 3.06208459e-03]  
+Distance to nearest existing observation: 0.32167082653265755  
+
+For Function 1, maximum-distance exploration selected [0.000045, 0.003062], with a distance of approximately 0.322 from its nearest existing observation. This deliberately targets a relatively unexplored region of the input space rather than relying on the RBF/UCB model, which continued to show modelling issues and was not supported by useful SVM classification performance.
+
+**Step 5d. Function 6: use the SVM**
+
+For Function 6, the current RBF Gaussian Process could not meaningfully rank candidate points because it produced identical predictions and uncertainty across the search space. However, the linear SVM achieved a relatively strong cross-validation accuracy of 0.821, suggesting that it could distinguish between higher- and lower-performing regions reasonably well. A linear SVM was therefore fitted to all available Function 6 observations and used to score 100,000 candidate points. Candidates with higher decision scores are classified more strongly as belonging to the higher-performing region. The highest-scoring candidate will initially be examined alongside its distance from the current best point before deciding whether it provides a sensible next query.
+
+Function 6:  
+Selected point: [0.01375812 0.14792993 0.44559686 0.99484501 0.01346948]  
+SVM decision score: 5.272052074088469  
+
+Current best point: [0.246549 0.344645 0.479525 0.733976 0.025332]  
+Distance from current best: 0.4027814448701828  
+
+The SVM-selected candidate achieved a strong positive decision score of 5.27 and was approximately 0.403 from the current best observation. This suggests that the point provides a degree of exploration while remaining strongly within the region classified by the SVM as higher-performing. It was therefore retained as the proposed query for Function 6.
+
+**Step 6: Final Validation**
+
+Before submission, the eight proposed query points were combined and validated. Each point was checked to ensure that all coordinates remained within the permitted [0,1] range and that no query duplicated an existing observation. The distance from each proposed point to its nearest existing observation was also calculated as a final sense-check on how exploratory or exploitative the selection was. Function 1 was additionally confirmed as the intended maximum-distance exploration point, while the remaining functions were retained according to their selected UCB or SVM-based strategies.
+
+Function 1:   
+Selected point: [4.500e-05 3.062e-03]  
+Selection method: Maximum-distance exploration  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.321671   
+Maximum-distance selection correct: True  
+
+Function 2:     
+Selected point: [0.709627 0.881953]   
+Selection method: RBF GP + UCB  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.045156  
+
+Function 3:  
+Selected point: [0.732035 0.9973   0.015653]  
+Selection method: RBF GP + UCB  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.306635  
+
+Function 4:    
+Selected point: [0.391976 0.424757 0.494823 0.464424]  
+Selection method: RBF GP + UCB  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.137608  
+
+Function 5:    
+Selected point: [0.671629 0.981118 0.990458 0.985189]  
+Selection method: RBF GP + UCB  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.203041  
+
+Function 6:  
+Selected point: [0.013758 0.14793  0.445597 0.994845 0.013469]  
+Selection method: Linear SVM  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.402781  
+
+Function 7:  
+Selected point: [0.021549 0.313334 0.360216 0.141732 0.295328 0.686548]  
+Selection method: RBF GP + UCB  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.161151  
+  
+Function 8:   
+Selected point: [0.025529 0.451238 0.098209 0.031391 0.412421 0.138573 0.114934 0.994361]  
+Selection method: RBF GP + UCB  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.800486  
+
+The final validation confirmed that all eight proposed queries were within the permitted input range and did not duplicate any existing observations. Function 1 was confirmed as the intended maximum-distance exploration point, while Functions 2, 3, 4, 5, 7 and 8 retained their UCB-selected candidates and Function 6 retained the SVM-informed candidate. The nearest-observation distances also reflected the intended variation in strategy: Functions 2, 4, 5 and 7 remained relatively close to previously sampled regions, while Functions 1, 3, 6 and particularly 8 provided greater exploration. Overall, the final selections combine exploitation of promising regions with exploration where the available models indicate greater uncertainty or where the GP was unable to provide reliable guidance.
+
+**Final Points For Submission**
+
+Function 1: 0.000045-0.003062  
+Function 2: 0.709627-0.881953  
+Function 3: 0.732035-0.997300-0.015653  
+Function 4: 0.391976-0.424757-0.494823-0.464424  
+Function 5: 0.671629-0.981118-0.990458-0.985189  
+Function 6: 0.013758-0.147930-0.445597-0.994845-0.013469  
+Function 7: 0.021549-0.313334-0.360216-0.141732-0.295328-0.686548  
+Function 8: 0.025529-0.451238-0.098209-0.031391-0.412421-0.138573-0.114934-0.994361  
+
+Strategy chosen:  
+F1: maximum-distance exploration  
+F2: GP + UCB  
+F3: GP + UCB  
+F4: GP + UCB  
+F5: GP + UCB, continuing to exploit the promising region  
+F6: linear SVM-informed selection  
+F7: GP + UCB  
+F8: GP + UCB  
 
