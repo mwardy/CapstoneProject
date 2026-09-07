@@ -15,6 +15,18 @@ The capstone project involves using Bayesian Optimisation to find the maximum va
 - Select and submit the next point — Choose the candidate with the highest UCB for each function, check whether the choice appears sensible, and format each query to six decimal places for submission.
 - Reflect and update — Explain the reasoning behind the selections and, once the new outputs are received, add them to the existing data and repeat the optimisation process.
 
+**Initial Data Summary**
+- The initial datasets varied in size, from 10 observations for the 2D functions to 40 observations for the 8D function.
+
+Function 1: 10 observations, 2 dimensions
+Function 2: 10 observations, 2 dimensions
+Function 3: 15 observations, 3 dimensions
+Function 4: 30 observations, 4 dimensions
+Function 5: 20 observations, 4 dimensions
+Function 6: 20 observations, 5 dimensions
+Function 7: 30 observations, 6 dimensions
+Function 8: 40 observations, 8 dimensions
+
 **Module 12 (Week 1)**
 
 **Methodology**
@@ -345,4 +357,611 @@ Distance from current best: 0.9368
 
 **Module 13 (Week 2)**
 
+**New Output Values**
+
+Function 1:	0
+Function 2:	-0.08204067029832242
+Function 3:	-0.02016690747473939
+Function 4:	-0.3006446531358864
+Function 5:	2329.015853969669
+Function 6:	-2.661555742668831
+Function 7:	1.9506122834052728
+Function 8:	9.821986472796599
+
 **Methodology**
+
+1. Add the eight new observations to each function's dataset and compare them with the previous best outputs.
+2. Evaluate Week 1's strategy — identify where UCB worked well (especially 3, 4, 5, 7 and 8) and where it didn't (1, 2 and 6).
+3. Refit the Gaussian Processes with the additional observations and check whether the RBF behaviour has improved, particularly the length-scale/prediction issues for Functions 1 and 6.
+4. Test an alternative kernel where justified — particularly Functions 1 and 6 — and compare its behaviour with our RBF baseline rather than automatically replacing RBF.
+5. Adapt exploration vs exploitation by function. Strong new results such as Functions 4 and 5 give us a reason to investigate promising regions more closely, whereas poorly understood functions may still warrant exploration.
+6. Generate and assess the second-round queries, using UCB where the GP is behaving sensibly and an appropriate alternative where it isn't.
+
+**Step 1. Compare to previous best outputs**
+The new observations were compared with the previous maximum outputs to assess the performance of the first-round strategy. Five of the eight queries produced new best observations, with Functions 4 and 5 showing particularly large improvements. Functions 3, 7 and 8 also improved on their previous maxima, suggesting that the UCB approach successfully identified promising areas for several functions. Functions 1, 2 and 6 did not improve. However, Functions 1 and 6 had deliberately used an exploration-focused strategy due to limitations identified in their RBF models, meaning these results still provide useful information about previously unexplored areas of their search spaces.
+
+Function 1:  
+Previous best: 0.000000  
+New output:    0.000000  
+Difference:    -0.000000  
+Updated best:  0.000000  
+Result: Did not improve  
+
+Function 2:  
+Previous best: 0.611205
+New output:    -0.082041
+Difference:    -0.693246
+Updated best:  0.611205
+Result: Did not improve
+
+Function 3:  
+Previous best: -0.034835
+New output:    -0.020167
+Difference:    0.014668
+Updated best:  -0.020167
+Result: NEW BEST
+
+Function 4:  
+Previous best: -4.025542
+New output:    -0.300645
+Difference:    3.724898
+Updated best:  -0.300645
+Result: NEW BEST
+
+Function 5:  
+Previous best: 1088.859618
+New output:    2329.015854
+Difference:    1240.156236
+Updated best:  2329.015854
+Result: NEW BEST
+
+Function 6:  
+Previous best: -0.714265
+New output:    -2.661556
+Difference:    -1.947291
+Updated best:  -0.714265
+Result: Did not improve
+
+Function 7:  
+Previous best: 1.364968
+New output:    1.950612
+Difference:    0.585644
+Updated best:  1.950612
+Result: NEW BEST
+
+Function 8:  
+Previous best: 9.598482
+New output:    9.821986
+Difference:    0.223504
+Updated best:  9.821986
+Result: NEW BEST
+
+**Step 2. Refit the RBF Models**
+- What has changed now that the GP has one additional observation?
+
+After incorporating the new observations, the RBF Gaussian Processes were refitted to assess whether the additional information changed their representation of each function. Most functions produced broadly similar length scales to the previous round. However, Function 6 changed substantially from a length scale at the lower bound of 1e-05 to 0.481. Although its exploratory query did not improve the maximum output, the new observation appears to have provided useful information that allowed the GP to model relationships across a wider region of the search space. Function 1 remained at the lower bound of 1e-05 and continued to produce a convergence warning, suggesting that the RBF kernel still struggles to represent this function.
+
+Function 1:  
+Fitted kernel: RBF(length_scale=1e-05)   
+
+Function 2:  
+Fitted kernel: RBF(length_scale=0.0453)  
+
+Function 3:  
+Fitted kernel: RBF(length_scale=0.202)  
+
+Function 4:  
+Fitted kernel: RBF(length_scale=0.522)  
+
+Function 5:  
+Fitted kernel: RBF(length_scale=0.225)  
+
+Function 6:  
+Fitted kernel: RBF(length_scale=0.481)  
+
+Function 7:  
+Fitted kernel: RBF(length_scale=0.354)  
+
+Function 8:  
+Fitted kernel: RBF(length_scale=0.913)  
+
+Based on these results, the RBF model will continue to be used for Functions 2–8, as the fitted length scales now appear suitable for distinguishing between candidate points. Function 6 can therefore return to the standard UCB approach following the improvement in its model. Function 1 will be treated separately, as its length scale remains at the lower bound despite the additional exploratory observation. An alternative kernel, such as Matérn, will therefore be tested against RBF to determine whether it provides a more informative model before selecting the next query point.
+
+**Step 3. Compare RBF and Matérn for Function 1**
+
+RBF kernel:  
+RBF(length_scale=1e-05)  
+
+Matérn kernel:  
+Matern(length_scale=1e-05, nu=2.5)  
+
+The Matérn kernel did not improve the fit for Function 1, as its optimised length scale also reached the lower bound of 1e-05. This suggests that the modelling difficulty is not simply caused by the smoothness assumption of the RBF kernel, but by the limited structure available in the current observations. As neither kernel provided a clearly more informative fit, Function 1 will continue to be treated cautiously and may require further exploration before model-driven query selection becomes reliable.
+
+**Step 3b. Compare RBF vs Matérn predictions**
+
+As both the RBF and Matérn kernels produced the same extremely small length scale for Function 1, their predictions will now be compared across 100,000 candidate points. The aim is to determine whether either model can meaningfully distinguish between unexplored areas by examining the variation in predicted outputs and uncertainty. If both models continue to produce almost identical predictions across the search space, this would suggest that neither currently provides reliable guidance for UCB, and a more exploration-focused query will be used instead.
+
+RBF  
+Predicted output range: -0.0003278239 to -0.0000001931  
+Uncertainty range:      0.0000355799 to 0.0010366701  
+
+MATERN  
+Predicted output range: -0.0003278239 to -0.0000003215  
+Uncertainty range:      0.0000459032 to 0.0010366701  
+
+The predictions from the RBF and Matérn models were compared across 100,000 candidate points. Both produced very similar predicted output and uncertainty ranges, indicating that changing the kernel did not materially improve the model's ability to distinguish between candidate regions. As neither model currently provides a clear advantage for Function 1, a further exploration-based query will be used to gather information from a poorly sampled area of the search space rather than relying on UCB to exploit the current predictions.
+
+**Step 4. Generate candidate points and use UCB**
+
+For Functions 2–8, 100,000 new candidate points will be generated and evaluated using the updated RBF Gaussian Process models. UCB will again be used to combine predicted output and uncertainty, allowing the queries to balance exploitation of promising regions with exploration of uncertain areas. The exploration parameter κ will initially remain at 2.5, providing consistency with the first round while allowing the effect of the additional observations and updated models to be assessed before making further changes. Function 6 can now return to this UCB approach following the improvement in its fitted RBF model, while Function 1 will remain separate and use an exploration-based strategy because neither RBF nor Matérn provided sufficiently informative predictions.
+
+Function 2:  
+Selected point: [0.65528565 0.92989635]  
+Predicted output: 0.44107070745260113  
+Uncertainty: 0.19003228777907213  
+UCB: 0.9161514269002815  
+
+Function 3:  
+Selected point: [0.39752993 0.09047714 0.44731895]  
+Predicted output: -0.05580113542024088  
+Uncertainty: 0.07430259032309242  
+UCB: 0.12995534038749015  
+
+Function 4:  
+Selected point: [0.48075601 0.47400033 0.22905919 0.42917843]  
+Predicted output: -1.666506404136829  
+Uncertainty: 0.8868534178318199  
+UCB: 0.550627140442721   
+
+Function 5:  
+Selected point: [0.51484244 0.85610509 0.96150603 0.99849219]  
+Predicted output: 2112.903795601483  
+Uncertainty: 303.2913666553336  
+UCB: 2871.132212239817   
+
+Function 6:  
+Selected point: [0.24654859 0.34464495 0.47952502 0.733976   0.02533225]  
+Predicted output: -0.6645463641633735  
+Uncertainty: 0.3554831146702006  
+UCB: 0.224161422512128  
+
+Function 7:  
+Selected point: [0.08033361 0.31746516 0.48551741 0.0555686  0.40688258 0.93197557]  
+Predicted output: 1.7729655691895485  
+Uncertainty: 0.24096833783176155  
+UCB: 2.375386413768952  
+
+Function 8:  
+Selected point: [0.07812669 0.66871085 0.05418798 0.20948756 0.86355186 0.7177987 0.0744394  0.86629963]  
+Predicted output: 9.712587226001919  
+Uncertainty: 0.4625134992197021  
+UCB: 10.868870974051173  
+
+Using the updated models, UCB produced different balances of predicted performance and uncertainty across the functions. Functions 5 and 7 selected points with particularly strong predicted outputs following their successful first-round queries, suggesting greater exploitation of the promising regions identified previously. Other functions, such as Function 4, received a larger contribution from uncertainty, indicating a greater exploratory element. Function 6 also now produced a meaningful UCB selection following the improvement in its fitted RBF model. Before finalising the queries, the proposed points will be compared with the current best observations to better understand the balance between exploration and exploitation and determine whether any adjustment to the strategy is justified.
+
+**Step 4. Compare proposed queries with current best points**
+
+The proposed UCB queries were compared with the current best-known observations using Euclidean distance. This provides an additional indication of whether each query is exploiting an established high-performing region or exploring a different area of the search space. Distance is not treated as a fixed measure of exploration or exploitation, but is considered alongside predicted output and model uncertainty when assessing each proposed query.
+
+Function 2:  
+Current best point: [0.702637 0.926564]  
+Current best output: 0.611205  
+
+Proposed new point: [0.655286 0.929896]  
+Distance from current best: 0.0475  
+
+Function 3:  
+Current best point: [0.409499 0.399    0.519487]  
+Current best output: -0.020167  
+
+Proposed new point: [0.39753  0.090477 0.447319]  
+Distance from current best: 0.3171  
+
+Function 4:  
+Current best point: [0.399157 0.433203 0.357699 0.461233]  
+Current best output: -0.300645  
+
+Proposed new point: [0.480756 0.474    0.229059 0.429178]  
+Distance from current best: 0.1609   
+
+Function 5:  
+Current best point: [0.352268 0.854957 0.92921  0.999541]  
+Current best output: 2329.015854  
+
+Proposed new point: [0.514842 0.856105 0.961506 0.998492]  
+Distance from current best: 0.1658    
+
+Function 6:  
+Current best point: [0.728186 0.154693 0.732552 0.693997 0.056401]  
+Current best output: -0.714265  
+
+Proposed new point: [0.246549 0.344645 0.479525 0.733976 0.025332]  
+Distance from current best: 0.5785  
+
+Function 7:  
+Current best point: [0.120627 0.403921 0.379973 0.146533 0.335853 0.763305]  
+Current best output: 1.950612  
+
+Proposed new point: [0.080334 0.317465 0.485517 0.055569 0.406883 0.931976]  
+Distance from current best: 0.249  
+
+Function 8:  
+Current best point: [0.243397 0.036115 0.078358 0.053721 0.783854 0.278393 0.034947 0.429032]  
+Current best output: 9.821986  
+
+Proposed new point: [0.078127 0.668711 0.054188 0.209488 0.863552 0.717799 0.074439 0.8663  ]  
+Distance from current best: 0.919  
+
+The distance comparison showed that the updated UCB strategy is naturally producing different exploration–exploitation behaviour across the functions. Function 2 selected a point extremely close to its current best observation, while Functions 4, 5 and 7 also remained relatively close to promising regions. In contrast, Functions 6 and 8 selected substantially more distant points, indicating greater exploration of their search spaces. As the same κ value of 2.5 is already producing different behaviour according to each model's predictions and uncertainty, it will be retained for this round rather than introducing function-specific values unnecessarily.
+
+**Step 5. Select an exploration point for Function 1**
+
+As neither the RBF nor Matérn model provided sufficiently informative predictions for Function 1, an exploration-based approach was used instead of UCB. The distance between each candidate point and its nearest existing observation was calculated, and the candidate with the greatest minimum distance was selected. This targets a poorly sampled region of the search space, allowing the next observation to provide new information that may improve the Gaussian Process in future rounds.
+
+Function 1 - Exploration  
+Selected point: [0.99997255 0.99984253]  
+Distance to nearest existing observation: 0.3456413874867929  
+
+The maximum-distance approach selected a point near the upper-right boundary of Function 1's search space, with a distance of 0.346 from its nearest existing observation. This confirms that the query targets a relatively poorly sampled region rather than an area already represented in the data. As the GP models currently provide limited guidance for Function 1, this point was retained as an information-gathering query that may help improve the model in subsequent rounds.
+
+**Step 6 - Final Check**
+
+Before finalising the second-round queries, each selected point was checked to ensure that all input values remained within the permitted range and that no query duplicated an existing observation. The Function 1 query was also verified as the maximum-distance exploratory candidate, while the remaining functions had already been selected as the highest-UCB candidates from their respective candidate sets. This final check was used to confirm that the proposed queries were valid before submission.
+
+Function 1:  
+Selected point: [0.999973 0.999843]  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.345641  
+Maximum-distance selection correct: True   
+
+Function 2:   
+Selected point: [0.655286 0.929896]  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.047468  
+Selection method: UCB  
+
+Function 3:  
+Selected point: [0.39753  0.090477 0.447319]  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.291689  
+Selection method: UCB  
+
+Function 4:  
+Selected point: [0.480756 0.474    0.229059 0.429178]  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.160930  
+Selection method: UCB  
+
+Function 5:  
+Selected point: [0.514842 0.856105 0.961506 0.998492]  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.165759  
+Selection method: UCB  
+
+Function 6:  
+Selected point: [0.246549 0.344645 0.479525 0.733976 0.025332]  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.562812  
+Selection method: UCB  
+
+Function 7:  
+Selected point: [0.080334 0.317465 0.485517 0.055569 0.406883 0.931976]  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.249013  
+Selection method: UCB  
+ 
+Function 8:  
+Selected point: [0.078127 0.668711 0.054188 0.209488 0.863552 0.717799 0.074439 0.8663  ]  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.774658  
+Selection method: UCB  
+
+The final validation confirmed that all eight proposed queries were within the permitted input range and did not duplicate any existing observations. Function 1 was confirmed as the maximum-distance exploratory candidate, while Functions 2–8 were selected using UCB from their updated RBF models. The distance checks also showed different behaviour between the functions, with Functions 2, 4, 5 and 7 remaining relatively close to existing observations, while Functions 6 and 8 moved further into less explored regions. This supports the decision to retain κ = 2.5, as the same UCB setting was already producing a mixture of exploration and exploitation depending on the information available for each function.
+
+
+**Module 14 (Week 3)**
+
+**New Output Values**
+
+Function 1:	1.868495640628433e-192
+Function 2:	0.36601049236039945
+Function 3:	-0.06086980027965498
+Function 4:	-3.743172382958963
+Function 5:	2765.8197868846855
+Function 6:	-0.45851061638506707
+Function 7:	0.975232656186371
+Function 8:	9.62112231085
+
+**Methodology**
+
+1. Add and assess the new observations
+The outputs returned from the second-round queries will be added to the existing datasets and compared with the previous best values. This will show which queries improved the known maximum and provide evidence of how successful the previous exploration and exploitation decisions were.
+
+2. Refit and evaluate the Gaussian Process models
+The Gaussian Processes will be refitted using the expanded datasets. Changes in fitted length scales, predictions and uncertainty will be examined to determine whether the additional observations have improved the models or revealed any continuing limitations. Particular attention will again be given to Function 1.
+
+3. Introduce SVMs and investigate high- and low-performing regions
+As SVMs are introduced in this stage of the course, they will be tested as an additional way of understanding the functions. The existing observations can be divided into relatively high- and low-performing outputs, allowing an SVM to test whether these regions can be distinguished from their input characteristics.
+
+4. Compare linear and nonlinear SVM approaches
+A linear SVM can be compared with a kernel SVM to investigate whether the higher-performing observations appear to be separated by a simple boundary or whether nonlinear relationships are present. The aim is to determine whether SVMs provide useful additional information for query selection rather than automatically replacing the existing optimisation approach.
+
+5. Reassess exploration versus exploitation
+The performance of the previous queries, updated GP predictions, model uncertainty and any useful evidence from the SVM analysis will be considered together. Functions with clearly promising regions may justify further exploitation, while poorly understood functions may continue to benefit from exploration.
+
+6. Select the third-round queries
+The existing GP + UCB approach will remain the baseline where it continues to behave effectively. SVM results or alternative strategies will only influence the query selection where there is evidence that they provide an improvement over the existing approach.
+
+7. Validate and submit the final queries
+The eight proposed points will be checked to ensure that they fall within the permitted [0,1] range, do not duplicate previous observations and reflect the intended strategy. They will then be formatted to six decimal places for submission.
+
+**Step 1. Add and assess the new observations**
+
+The outputs returned from the second-round queries were added to the existing observations for each function. These were compared with the previous best outputs to assess how successful the previous query strategy had been. This also provides the expanded dataset that will be used to refit the models for the third round.
+
+Function 1:   
+Previous best: 0.000000  
+New output:    0.000000  
+Difference:    -0.000000  
+Updated best:  0.000000  
+Result: Did not improve  
+
+Function 2:   
+Previous best: 0.611205  
+New output:    0.366010  
+Difference:    -0.245195  
+Updated best:  0.611205  
+Result: Did not improve  
+
+Function 3:  
+Previous best: -0.020167  
+New output:    -0.060870  
+Difference:    -0.040703  
+Updated best:  -0.020167  
+Result: Did not improve  
+
+Function 4:  
+Previous best: -0.300645  
+New output:    -3.743172  
+Difference:    -3.442528  
+Updated best:  -0.300645  
+Result: Did not improve  
+
+Function 5:  
+Previous best: 2329.015854  
+New output:    2765.819787  
+Difference:    436.803933  
+Updated best:  2765.819787  
+Result: NEW BEST  
+
+Function 6:  
+Previous best: -0.714265  
+New output:    -0.458511  
+Difference:    0.255754  
+Updated best:  -0.458511  
+Result: NEW BEST  
+
+Function 7:  
+Previous best: 1.950612  
+New output:    0.975233  
+Difference:    -0.975380  
+Updated best:  1.950612  
+Result: Did not improve  
+ 
+Function 8:  
+Previous best: 9.821986  
+New output:    9.621122  
+Difference:    -0.200864  
+Updated best:  9.821986  
+Result: Did not improve  
+
+The latest queries produced new best outputs for Functions 5 and 6. Function 5 improved from 2329.02 to 2765.82, providing further evidence that the high-performing region identified in previous rounds remains promising. Function 6 improved from -0.7143 to -0.4585, suggesting that returning to the GP/UCB approach after its earlier modelling issues was successful. The remaining functions did not improve their previous best values, although these observations still provide additional information about their response surfaces and can be used when refitting the models.
+
+Function 6:  
+Week 1: RBF model problematic → deliberate exploration  
+Week 2: extra observation improved the GP → returned to UCB  
+Week 3 result: UCB query produced a new best  
+
+**Step 2. Refit and evaluate the Gaussian Process models**
+
+The Gaussian Process models were refitted using the expanded datasets containing all observations collected so far. The fitted RBF length scales were then examined to assess how the models had changed following the latest queries and to identify any continuing modelling issues. Particular attention was given to Function 1, which previously produced an extremely small length scale and uninformative predictions.
+
+Function 1:   
+Fitted kernel: RBF(length_scale=1e-05)  
+
+Function 2:   
+Fitted kernel: RBF(length_scale=0.0427)  
+
+Function 3:  
+Fitted kernel: RBF(length_scale=0.202)  
+
+Function 4:  
+Fitted kernel: RBF(length_scale=0.495)  
+
+Function 5:  
+Fitted kernel: RBF(length_scale=0.413)  
+
+Function 6:  
+Fitted kernel: RBF(length_scale=1e-05)  
+
+Function 7:  
+Fitted kernel: RBF(length_scale=0.244)   
+  
+Function 8:   
+Fitted kernel: RBF(length_scale=0.931)  
+
+After refitting the RBF Gaussian Processes, most functions continued to produce stable length scales. Function 5 increased from approximately 0.225 to 0.413 following another strong observation, while Functions 2, 3, 4, 7 and 8 remained broadly similar to the previous round. Function 1 continued to hit the lower length-scale bound of 1e-05, indicating that its modelling issue remains unresolved. Function 6 also returned to the lower bound after previously improving to 0.481, suggesting that the latest observation materially changed the fitted relationship and that the RBF model may again be struggling to represent this function reliably.
+
+**Step 2b. Check predictions and uncertainty**
+
+As Functions 1 and 6 both reached the lower RBF length-scale bound, their predictions were examined across 100,000 randomly generated candidate points. The range of predicted outputs and uncertainty was assessed to determine whether the Gaussian Processes could meaningfully distinguish between different regions of the search space. If predictions and uncertainty remain almost constant across candidates, UCB would provide little useful guidance for selecting the next query.
+
+Function 1:  
+Predicted mean minimum: -0.0003005052  
+Predicted mean maximum: -0.0000001770  
+Predicted mean range:   0.0003003282  
+
+Uncertainty minimum:    0.0000342068  
+Uncertainty maximum:    0.0009966631  
+Uncertainty range:      0.0009624562  
+
+Function 6:
+Predicted mean minimum: -1.5012665979  
+Predicted mean maximum: -1.5012665979  
+Predicted mean range:   0.0000000000  
+
+Uncertainty minimum:    0.5421470063  
+Uncertainty maximum:    0.5421470063  
+Uncertainty range:      0.0000000000  
+
+The diagnostic showed different behaviour for the two functions despite both reaching the lower RBF length-scale bound. Function 1 now showed some variation in both predicted output and uncertainty across the candidate space, suggesting that the model can distinguish between at least some regions, although the boundary warning remains a concern. In contrast, Function 6 produced identical predicted means and uncertainty across all 100,000 candidates. This means that UCB cannot meaningfully rank unexplored points for Function 6, so the current RBF model should not be used directly for its next query.
+
+**Step 3. Introduce SVMs**
+
+SVMs were introduced as an additional method for investigating the structure of the functions and identifying whether the input variables can distinguish between relatively high- and low-performing regions. As each function produces a continuous output rather than a predefined class, the observations will first be converted into a simple binary classification problem. For each function, the median observed output will be used as the threshold: observations above the median will be classified as high-performing, while observations at or below the median will be classified as low-performing. The median was chosen because it provides a simple function-specific threshold and should produce relatively balanced classes, which is particularly useful given the limited number of observations available.
+
+A linear SVM and an RBF-kernel SVM will then be fitted to these classes. The linear model will test whether the higher- and lower-performing observations can be separated using a relatively simple linear boundary, while the RBF model allows a nonlinear boundary to be learned. Their performance will be compared using three-fold cross-validation so that the limited observations can be used more efficiently than with a single train/test split. If the RBF SVM performs noticeably better, this may provide evidence that the distinction between higher- and lower-performing regions is nonlinear.
+
+This analysis will be treated as an additional diagnostic rather than a replacement for Bayesian Optimisation. The median threshold only describes relative performance within the observations collected so far and does not represent the true maximum or a known boundary in the underlying function. Similarly, SVM classification does not provide the predictive uncertainty used by UCB. The results will therefore be considered alongside the Gaussian Process models, previous query performance and exploration–exploitation behaviour when deciding whether they provide useful information for the next query.
+
+**Step 3a. Create high/low classes**
+
+Function 1:   
+Median threshold: 0.000000  
+Low-performing observations:  6  
+High-performing observations: 6  
+
+Function 2:   
+Median threshold: 0.229792  
+Low-performing observations:  6  
+High-performing observations: 6  
+
+Function 3:  
+Median threshold: -0.094190  
+Low-performing observations:  9  
+High-performing observations: 8  
+
+Function 4:  
+Median threshold: -15.756741  
+Low-performing observations:  16  
+High-performing observations: 16  
+
+Function 5:  
+Median threshold: 64.431793  
+Low-performing observations:  11  
+High-performing observations: 11  
+
+Function 6:  
+Median threshold: -1.446370  
+Low-performing observations:  11  
+High-performing observations: 11  
+
+Function 7:  
+Median threshold: 0.088196  
+Low-performing observations:  16  
+High-performing observations: 16  
+  
+Function 8:   
+Median threshold: 7.940817  
+Low-performing observations:  21  
+High-performing observations: 21  
+
+Using the median as the classification threshold produced balanced high- and low-performing groups across all eight functions. Functions with an even number of observations were split equally between the two classes, while Function 3, with 17 observations, was divided into nine lower-performing and eight higher-performing observations. This confirms that the median provides a suitable threshold for the exploratory SVM analysis without creating substantial class imbalance. The resulting classes can now be used to compare whether linear or nonlinear SVM decision boundaries are better able to distinguish relatively high-performing regions.
+
+**3b. Compare linear and RBF SVMs**
+
+Function 1:   
+Linear SVM mean accuracy: 0.167
+RBF SVM mean accuracy:    0.500
+
+Function 2:   
+Linear SVM mean accuracy: 0.667
+RBF SVM mean accuracy:    0.833
+
+Function 3:  
+Linear SVM mean accuracy: 0.344
+RBF SVM mean accuracy:    0.522
+
+Function 4:  
+Linear SVM mean accuracy: 0.627
+RBF SVM mean accuracy:    0.782
+
+Function 5:  
+Linear SVM mean accuracy: 0.649
+RBF SVM mean accuracy:    0.458
+
+Function 6:  
+Linear SVM mean accuracy: 0.821
+RBF SVM mean accuracy:    0.768
+
+Function 7:  
+Linear SVM mean accuracy: 0.785
+RBF SVM mean accuracy:    0.815
+  
+Function 8:   
+Linear SVM mean accuracy: 0.857
+RBF SVM mean accuracy:    0.833
+
+The SVM comparison produced mixed results across the eight functions. The RBF SVM achieved higher cross-validation accuracy for Functions 1, 2, 3, 4 and 7, suggesting that allowing a nonlinear decision boundary may be useful for separating relatively high- and low-performing observations in these functions. The improvement was particularly clear for Functions 2 and 4. However, Function 1 remained difficult to classify, with the RBF model achieving only 0.500 accuracy despite substantially outperforming the linear model.
+
+For Functions 5, 6 and 8, the linear SVM performed better than the RBF alternative. Functions 6 and 8 achieved particularly strong linear accuracies of 0.821 and 0.857 respectively, suggesting that their high- and low-performing observations may contain some relatively simple separable structure. Function 5 also favoured the linear model, although its accuracy of 0.649 was more moderate. Overall, the results show that no single SVM kernel is consistently best across all eight functions and support continuing to consider each function individually.
+
+Overall:
+F2: RBF 0.833 vs Linear 0.667 → useful evidence favouring nonlinear separation.  
+F4: RBF 0.782 vs Linear 0.627 → similar evidence.  
+F6: Linear 0.821 vs RBF 0.768 → interesting, especially because its GP is currently failing.  
+F8: Linear 0.857 vs RBF 0.833 → both are strong; not much evidence that nonlinear complexity is necessary.  
+F1: neither is convincing.  
+F3: neither particularly convincing.  
+F5: linear somewhat better, but neither outstanding.  
+F7: both reasonably strong and very similar.  
+
+**Step 4. Reassess exploration vs exploitation**
+
+Before selecting the third-round queries, the strategy for each function was reassessed using the results collected so far. This considered whether the previous query improved the known maximum, whether the updated Gaussian Process was producing reliable predictions and uncertainty, and whether the SVM analysis identified useful structure between higher- and lower-performing observations. Functions with reliable models and established promising regions could therefore favour exploitation, while functions with weak or uninformative models could benefit from greater exploration. The aim was not to apply a fixed strategy to every function, but to use the accumulated evidence to determine an appropriate exploration–exploitation balance for each one.
+
+Function-by-function assessment:  
+Function 1: Continued exploration is appropriate because the latest query did not improve the best output, the RBF model remains at its lower length-scale bound, and the SVM results provided little useful separation between high- and low-performing observations.  
+Function 2: A balanced UCB approach will be retained. The GP remains usable, while the relatively strong RBF SVM accuracy suggests that some nonlinear structure may exist in the higher-performing region.  
+Function 3: A balanced UCB approach will continue because the GP remains stable, while neither SVM provided sufficiently strong evidence to justify changing the existing strategy.  
+Function 4: UCB will be retained with some emphasis on the previously identified promising region. Although the latest query did not improve the maximum, the previous round produced a substantial improvement and the RBF SVM also showed reasonably strong classification performance.  
+Function 5: Greater exploitation of the promising region is appropriate because successive queries have increased the best output from 1088.86 to 2329.02 and then 2765.82. The updated GP also remains usable, providing strong evidence for continuing to search around this region.  
+Function 6: The latest query produced a new best output, but the refitted RBF GP now produces identical predictions and uncertainty across candidate points, making UCB unsuitable in its current form. The relatively strong linear SVM accuracy of 0.821 provides an alternative source of information that can be investigated alongside exploration.  
+Function 7: A balanced UCB approach will be retained. The latest query did not improve the current maximum, but the GP remains usable and both SVM models showed reasonably good classification performance without a clear advantage for either.  
+Function 8: A balanced UCB approach will also be retained. The latest output was relatively close to the current best, the GP remains stable, and both SVM models performed strongly, suggesting useful structure without providing a clear reason to replace the existing optimisation approach.  
+  
+Function  Latest_Query_Improved  GP_Usable  Linear_SVM_Accuracy  RBF_SVM_Accuracy           Proposed_Strategy
+        1                  False      False                0.167             0.500                 Exploration
+        2                  False       True                0.667             0.833                Balanced UCB
+        3                  False       True                0.344             0.522                Balanced UCB
+        4                  False       True                0.627             0.782 UCB / moderate exploitation
+        5                   True       True                0.649             0.458        Greater exploitation
+        6                   True      False                0.821             0.768  SVM-informed / exploration
+        7                  False       True                0.785             0.815                Balanced UCB
+        8                  False       True                0.857             0.833                Balanced UCB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
