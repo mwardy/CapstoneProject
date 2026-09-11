@@ -1154,6 +1154,578 @@ F8: GP + UCB
 
 
 
+**Module 15 - Week 4**
+
+**Methodology**
+
+Step 1 – Update the data and assess results  
+- Add the latest input-output pairs to each dataset and compare them with the previous best results. This will show whether the strategies used in the previous round were successful and help determine whether they should be retained or adjusted.  
+
+Step 2 – Refit and diagnose the Gaussian Processes  
+- Refit the RBF Gaussian Process models using all available observations and examine their fitted length scales, predictions and uncertainty. Particular attention will be given to Functions 1 and 6, where the GP previously struggled to distinguish meaningfully between candidate points.  
+
+Step 3 – Compare different UCB κ values  
+- Rather than continuing with a fixed κ = 2.5, compare κ = 1.5, 2.5 and 3.5 for functions with usable GP models. These represent increasing emphasis on exploration. The resulting candidates will be compared using predicted performance, uncertainty and their location relative to existing observations rather than simply selecting the largest UCB value.  
+
+Step 4 – Select function-specific strategies  
+- Use the accumulated results to decide the appropriate exploration–exploitation balance for each function. Functions showing repeated improvement, particularly Function 5, may favour greater exploitation, while poorly understood functions may benefit from further exploration. Previous SVM results will also be considered where useful.  
+
+Step 5 – Compare with Expected Improvement  
+- Where appropriate, test Expected Improvement (EI) alongside UCB. EI provides an alternative way of selecting points by considering the expected improvement over the current best result, allowing us to assess whether the acquisition method itself materially changes the proposed query.  
+
+Step 6 – Final selection and validation  
+- Select the final eight queries using the combined evidence from the latest results, GP diagnostics, κ comparison and any useful alternative methods. Check that every point is within [0,1], does not duplicate an existing observation and provides a sensible level of exploration or exploitation before submission.  
+
+**Step 1 - Update the data and assess results**
+
+Function 1:   
+Previous best: 0.000000
+New output:    0.000000
+Difference:    -0.000000
+Updated best:  0.000000
+Result: Did not improve
+
+Function 2:     
+Previous best: 0.611205
+New output:    0.548608
+Difference:    -0.062597
+Updated best:  0.611205
+Result: Did not improve
+
+Function 3:  
+Previous best: -0.020167
+New output:    -0.115141
+Difference:    -0.094975
+Updated best:  -0.020167
+Result: Did not improve
+
+Function 4:    
+Previous best: -0.300645
+New output:    -1.850268
+Difference:    -1.549624
+Updated best:  -0.300645
+Result: Did not improve
+
+Function 5:    
+Previous best: 2765.819787
+New output:    4595.479318
+Difference:    1829.659532
+Updated best:  4595.479318
+Result: NEW BEST 
+
+Function 6:  
+Previous best: -0.458511
+New output:    -1.182842
+Difference:    -0.724332
+Updated best:  -0.458511
+Result: Did not improve
+
+Function 7:  
+Previous best: 1.950612
+New output:    2.139551
+Difference:    0.188939
+Updated best:  2.139551
+Result: NEW BEST
+  
+Function 8:   
+Previous best: 9.821986
+New output:    9.645301
+Difference:    -0.176685
+Updated best:  9.821986
+Result: Did not improve
+
+The latest queries produced new best outputs for Functions 5 and 7. Function 5 showed the largest improvement, increasing from 2765.82 to 4595.48 and providing further evidence that the search has identified a particularly strong region of its input space. Function 7 also improved from 1.95 to 2.14. The remaining functions did not improve, although Function 2 remained relatively close to its existing best. The SVM-informed query for Function 6 did not improve on the previous best, suggesting that SVM classification may be useful for identifying broadly higher-performing regions but does not necessarily identify the highest-output points within those regions. These results will be used to further adapt the strategy for the next round.
+
+**Step 2 – Refit and diagnose the Gaussian Processes**
+
+The Gaussian Process models were refitted using all available observations, retaining the RBF kernel used in previous rounds. Ten optimiser restarts were used to improve the likelihood of finding a suitable kernel length scale rather than relying on a single optimisation attempt. The fitted length scales were then examined for each function, as very small values can indicate that the GP is modelling observations as changing extremely rapidly across the input space and may therefore provide limited guidance for unseen candidates. These diagnostics will determine which functions have sufficiently informative GP models to proceed to the UCB κ comparison.
+
+Correction made to initial fitting:  
+During the initial Week 4 fitting, the optimiser restart parameter used in previous rounds was accidentally omitted. This resulted in Functions 1–7 all returning the minimum permitted RBF length scale of 1e-05, which was inconsistent with previous model behaviour and suggested that the optimisation had become trapped at the lower bound. The models were therefore refitted using n_restarts_optimizer=10, restoring consistency with the previous methodology before interpreting the results.
+
+Function 1:   
+Fitted kernel: RBF(length_scale=1e-05)
+
+Function 2:     
+Fitted kernel: RBF(length_scale=0.0516)
+
+Function 3:  
+Fitted kernel: RBF(length_scale=0.198)
+
+Function 4:    
+Fitted kernel: RBF(length_scale=0.428)
+
+Function 5:    
+Fitted kernel: RBF(length_scale=0.367)
+
+Function 6:  
+Fitted kernel: RBF(length_scale=1e-05)
+
+Function 7:  
+Fitted kernel: RBF(length_scale=0.296)
+  
+Function 8:   
+Fitted kernel: RBF(length_scale=0.949)
+
+Following the corrected fitting process, Functions 2, 3, 4, 5, 7 and 8 produced RBF length scales above the lower bound, ranging from 0.0516 for Function 2 to 0.949 for Function 8. These models therefore appear suitable for further GP-based analysis. Functions 1 and 6 again reached the minimum length scale of 1e-05, consistent with issues observed in previous rounds. This suggests that their current RBF models may struggle to generalise smoothly between observations, so their predictions should be examined separately before using UCB. Overall, the results support proceeding with the planned κ comparison for Functions 2, 3, 4, 5, 7 and 8.
+
+**Step 2b - Diagnostics for F1 and F6**
+
+Before excluding Functions 1 and 6 from the UCB comparison, their GP predictions were examined across a large sample of candidate points. The range of predicted means and uncertainties was calculated to determine whether the models could meaningfully distinguish between different regions of the input space. If predictions remain effectively constant, changing κ would provide little useful information because UCB would be unable to rank candidates meaningfully.
+
+Function 1:   
+Predicted mean minimum: -0.0002773894  
+Predicted mean maximum: -0.0000000154  
+Predicted mean range:   0.0002773740  
+
+Uncertainty minimum:    0.0000101201  
+Uncertainty maximum:    0.0009609052  
+Uncertainty range:      0.0009507851  
+
+Function 6:     
+Predicted mean minimum: -1.4874220585  
+Predicted mean maximum: -1.4874220585  
+Predicted mean range:   0.0000000000  
+
+Uncertainty minimum:    0.5341917888  
+Uncertainty maximum:    0.5341917888  
+Uncertainty range:      0.0000000000  
+
+The additional diagnostics confirmed that Functions 1 and 6 should not currently rely on standard GP/UCB selection. Function 6 produced completely identical predicted means and uncertainty across all 100,000 candidate points, meaning that its GP cannot distinguish between different regions of the search space and changing κ would have no effect on candidate ranking. Function 1 showed some variation in both predictions and uncertainty, but its RBF length scale remained at the minimum bound and the predicted outputs were extremely small. Given this persistent instability across multiple rounds, its GP predictions will continue to be treated cautiously. Functions 2, 3, 4, 5, 7 and 8 will therefore proceed to the κ comparison, while alternative strategies will be considered separately for Functions 1 and 6.
+
+Position going into Step 3:  
+- F1: GP still problematic → deal with separately.  
+- F2: usable GP → κ comparison.  
+- F3: usable GP → κ comparison.  
+- F4: usable GP → κ comparison.  
+- F5: usable GP + repeated major improvements → κ comparison, with a strong reason to consider lower κ/exploitation.  
+- F6: GP completely flat → κ comparison would be pointless; deal with separately.  
+- F7: usable GP + latest query produced a new best → κ comparison.  
+- F8: usable and very stable GP → κ comparison.
+
+**Step 3 - Compare different UCB κ values**
+
+In previous rounds, UCB used a fixed κ value of 2.5 for all functions. This week, κ values of 1.5, 2.5 and 3.5 were compared for Functions 2, 3, 4, 5, 7 and 8, where the GP models remained informative. Lower κ places greater emphasis on the predicted mean and therefore exploitation, while higher κ gives greater weight to uncertainty and exploration. For a fair comparison, the same 100,000 randomly generated candidate points were evaluated under all three κ values for each function. The selected candidates were compared using their predicted output, uncertainty and distance from the current best and nearest existing observations.
+
+**Step 3a – Generate and compare the candidates**
+
+Function 2:     
+Current best output: 0.611205  
+
+KAPPA = 1.5  
+Selected point: [0.73856  0.912272]  
+Predicted output:               0.556031  
+Uncertainty:                    0.121843  
+UCB:                            0.738795  
+Distance from current best:     0.0387  
+Distance from nearest existing: 0.0387  
+
+KAPPA = 2.5  
+Selected point: [0.688986 0.063026]  
+Predicted output:               0.375397   
+Uncertainty:                    0.210671  
+UCB:                            0.902075  
+Distance from current best:     0.8636  
+Distance from nearest existing: 0.0652  
+
+KAPPA = 3.5  
+Selected point: [0.725891 0.170323]  
+Predicted output:               0.342377  
+Uncertainty:                    0.221941  
+UCB:                            1.119170  
+Distance from current best:     0.7566  
+Distance from nearest existing: 0.0759  
+
+
+Function 3:    
+Current best output: -0.020167  
+
+KAPPA = 1.5  
+Selected point: [0.41795  0.732195 0.005457]  
+Predicted output:               -0.033932  
+Uncertainty:                    0.053728  
+UCB:                            0.046659  
+Distance from current best:     0.6126  
+Distance from nearest existing: 0.1921  
+
+KAPPA = 2.5  
+Selected point: [0.511158 0.731701 0.617932]  
+Predicted output:               -0.075090  
+Uncertainty:                    0.074427  
+UCB:                            0.110977  
+Distance from current best:     0.3615  
+Distance from nearest existing: 0.3032  
+
+KAPPA = 3.5  
+Selected point: [0.565168 0.760792 0.653023]  
+Predicted output:               -0.082998  
+Uncertainty:                    0.077189  
+UCB:                            0.187163  
+Distance from current best:     0.4159  
+Distance from nearest existing: 0.3541  
+
+
+
+Function 4:     
+Current best output: -0.300645  
+
+KAPPA = 1.5  
+Selected point: [0.44374  0.493644 0.40979  0.452219]  
+Predicted output:               -0.309086  
+Uncertainty:                    0.456642  
+UCB:                            0.375877  
+Distance from current best:     0.0918  
+Distance from nearest existing: 0.0918  
+
+KAPPA = 2.5  
+Selected point: [0.476265 0.525427 0.417514 0.439754]  
+Predicted output:               -0.694545  
+Uncertainty:                    0.674163  
+UCB:                            0.990863  
+Distance from current best:     0.1360  
+Distance from nearest existing: 0.1360  
+
+KAPPA = 3.5  
+Selected point: [0.047215 0.978118 0.999658 0.02652 ]  
+Predicted output:               -18.361781  
+Uncertainty:                    6.681320  
+UCB:                            5.022841  
+Distance from current best:     1.0109  
+Distance from nearest existing: 0.5669  
+
+
+Function 5:      
+Current best output: 4595.479318  
+
+KAPPA = 1.5  
+Selected point: [0.851064 0.985689 0.919598 0.97933 ]  
+Predicted output:               4561.793859  
+Uncertainty:                    452.311632  
+UCB:                            5240.261307  
+Distance from current best:     0.1931  
+Distance from nearest existing: 0.1931  
+
+KAPPA = 2.5  
+Selected point: [0.994129 0.987119 0.927372 0.967532]  
+Predicted output:               4090.674685  
+Uncertainty:                    726.333454  
+UCB:                            5906.508319  
+Distance from current best:     0.3291  
+Distance from nearest existing: 0.3291  
+
+KAPPA = 3.5  
+Selected point: [0.994129 0.987119 0.927372 0.967532]  
+Predicted output:               4090.674685  
+Uncertainty:                    726.333454  
+UCB:                            6632.841773  
+Distance from current best:     0.3291  
+Distance from nearest existing: 0.3291  
+
+
+Function 7:    
+Current best output: 2.139551  
+
+KAPPA = 1.5  
+Selected point: [0.091435 0.306185 0.316439 0.020166 0.225886 0.61874 ]  
+Predicted output:               1.959149  
+Uncertainty:                    0.276601  
+UCB:                            2.374051  
+Distance from current best:     0.1762  
+Distance from nearest existing: 0.1762  
+
+KAPPA = 2.5  
+Selected point: [0.091435 0.306185 0.316439 0.020166 0.225886 0.61874 ]  
+Predicted output:               1.959149  
+Uncertainty:                    0.276601  
+UCB:                            2.650652  
+Distance from current best:     0.1762  
+Distance from nearest existing: 0.1762  
+
+KAPPA = 3.5  
+Selected point: [0.178516 0.448011 0.378124 0.00201  0.138808 0.62281 ]  
+Predicted output:               1.641296  
+Uncertainty:                    0.383505  
+UCB:                            2.983562  
+Distance from current best:     0.3020  
+Distance from nearest existing: 0.2911  
+
+
+Function 8:    
+Current best output: 9.821986  
+
+KAPPA = 1.5  
+Selected point: [0.137618 0.223807 0.054101 0.335736 0.52861  0.334617 0.211854 0.436061]  
+Predicted output:               10.059119  
+Uncertainty:                    0.187332  
+UCB:                            10.340117  
+Distance from current best:     0.4756  
+Distance from nearest existing: 0.4756  
+
+KAPPA = 2.5  
+Selected point: [0.410732 0.64041  0.007318 0.44934  0.728174 0.071621 0.051404 0.007358]  
+Predicted output:               9.551346  
+Uncertainty:                    0.451204  
+UCB:                            10.679357  
+Distance from current best:     0.8824  
+Distance from nearest existing: 0.8337  
+
+KAPPA = 3.5  
+Selected point: [0.356959 0.085948 0.02191  0.938974 0.856847 0.711437 0.157641 0.027439]  
+Predicted output:               9.253277  
+Uncertainty:                    0.569759  
+UCB:                            11.247434  
+Distance from current best:     1.0823  
+Distance from nearest existing: 0.8796  
+
+
+Overview:  
+- Function 2: κ = 1.5 strongly exploits the current best region, only 0.039 away and with a predicted output of 0.556. κ = 2.5 and 3.5 move towards substantially more exploratory regions.  
+- Function 3: All three settings introduce some exploration. κ = 1.5 has the strongest predicted output (−0.034), while κ = 3.5 accepts a poorer prediction in exchange for greater uncertainty.  
+- Function 4: κ = 1.5 remains close to the current best and predicts −0.309, while κ = 3.5 moves dramatically away and has a much poorer predicted mean of −18.36. This illustrates the risk of excessive exploration.  
+- Function 5: κ = 1.5 stays closest to the newly identified high-performing region and predicts 4561.79, close to the current best of 4595.48. Higher κ moves further away and sacrifices predicted performance for uncertainty.  
+- Function 7: κ = 1.5 and 2.5 select exactly the same point, suggesting the preferred candidate is relatively robust to moderate changes in κ. κ = 3.5 produces a more exploratory alternative.  
+- Function 8: There is a particularly clear progression. κ = 1.5 selects a candidate predicted at 10.059, above the current best of 9.822, whereas κ = 2.5 and 3.5 move progressively further away and accept lower predicted means for greater uncertainty.  
+
+The κ comparison showed that changing the exploration weighting materially affected candidate selection for most functions. Lower κ generally favoured candidates with stronger predicted outputs and closer proximity to known high-performing regions, while higher κ increasingly prioritised uncertain regions. This was particularly clear for Functions 4 and 8, where κ = 3.5 selected substantially more distant points with lower predicted outputs but much greater uncertainty. Function 5 also showed a clear trade-off: κ = 1.5 remained closer to the region that produced the latest best output of 4595.48, while higher κ values moved further away in exchange for greater uncertainty. Function 7 was comparatively stable, with κ = 1.5 and 2.5 selecting exactly the same candidate. Overall, the results suggest that using a single fixed κ across all functions may not provide the most appropriate exploration–exploitation balance.
+
+
+**Step 3b – Further compare the effect of changing κ**
+
+To further assess the effect of κ, the distances between the candidates selected using κ = 1.5, 2.5 and 3.5 were calculated for each function. This shows whether changing κ produces genuinely different areas of the search space or only small variations around the same region. Large distances would suggest that the exploration weighting has a meaningful influence on the next query, while small distances would indicate that candidate selection is relatively robust to the choice of κ.
+
+Function 2:     
+Distance κ 1.5 → 2.5: 0.8507  
+Distance κ 1.5 → 3.5: 0.7421  
+Distance κ 2.5 → 3.5: 0.1135  
+
+Function 3:  
+Distance κ 1.5 → 2.5: 0.6195  
+Distance κ 1.5 → 3.5: 0.6647  
+Distance κ 2.5 → 3.5: 0.0707  
+
+Function 4:    
+Distance κ 1.5 → 2.5: 0.0478  
+Distance κ 1.5 → 3.5: 0.9597  
+Distance κ 2.5 → 3.5: 0.9480  
+
+Function 5:    
+Distance κ 1.5 → 2.5: 0.1438  
+Distance κ 1.5 → 3.5: 0.1438  
+Distance κ 2.5 → 3.5: 0.0000  
+
+Function 7:  
+Distance κ 1.5 → 2.5: 0.0000  
+Distance κ 1.5 → 3.5: 0.1986  
+Distance κ 2.5 → 3.5: 0.1986  
+  
+Function 8:   
+Distance κ 1.5 → 2.5: 0.7627  
+Distance κ 1.5 → 3.5: 0.9229  
+Distance κ 2.5 → 3.5: 0.9939  
+
+Overview:
+- F2: 1.5 is very different from 2.5/3.5, while 2.5 and 3.5 are similar. This looks almost like a choice between an exploitation region and an exploration region.  
+- F3: similar pattern — 2.5 and 3.5 are only 0.071 apart, while 1.5 selects somewhere substantially different.  
+- F4: 1.5 and 2.5 are extremely similar (0.048), but 3.5 suddenly jumps almost a full unit away. That supports our suspicion that 3.5 may be over-exploring F4.  
+- F5: relatively stable overall. Interestingly, 2.5 and 3.5 select exactly the same point, while 1.5 stays somewhat closer to the current best.  
+- F7: very stable. 1.5 and 2.5 are identical, and even the 3.5 candidate isn't enormously far away.  
+- F8: by far the least stable. All three κ values select substantially different regions. That makes the κ decision particularly consequential for this function.  
+
+The candidate-distance comparison confirmed that the effect of changing κ varies considerably between functions. Functions 2, 3 and 8 showed large movements between the lower and higher κ settings, indicating that the exploration weighting has a substantial influence on where the next query is placed. Function 4 was relatively stable between κ = 1.5 and 2.5 but changed dramatically at κ = 3.5. In contrast, Function 7 selected exactly the same point at κ = 1.5 and 2.5, while Function 5 selected the same point at κ = 2.5 and 3.5. These results suggest that κ tuning is particularly important for some functions, while others are relatively robust across part of the tested range.
+
+**Step 4 – Select function-specific strategies**
+
+The results from the previous rounds, GP diagnostics and κ comparison were combined to select a provisional strategy for each function. Rather than choosing κ solely from the highest UCB value, the decision considered recent query performance, predicted output, uncertainty and the amount of exploration produced by each setting. Functions with evidence of a strong-performing region were given greater emphasis on exploitation, while greater exploration was considered where recent queries had been unsuccessful. Functions 1 and 6 were treated separately because their current GP models were not considered sufficiently reliable for standard UCB selection.
+
+Function-by-function decisions:
+
+- Function 1: The RBF length scale remained at its lower bound of 1e-05, continuing the modelling issues seen in previous rounds. Maximum-distance exploration was therefore retained rather than relying on potentially unreliable GP predictions.  
+  
+- Function 2: The latest query produced 0.549, relatively close to the current best of 0.611. κ = 1.5 selected a point close to this high-performing region with the strongest predicted output of the three settings, so greater exploitation was preferred.  
+  
+- Function 3: The latest exploratory query produced −0.115, considerably below the current best of −0.020. κ = 1.5 offered the strongest predicted output while still maintaining some distance from existing observations, providing a more balanced alternative to further strong exploration.  
+  
+- Function 4: The latest query did not improve the current best. κ = 3.5 produced a very distant candidate with a particularly poor predicted output, while κ = 1.5 remained close to the best-known region and predicted performance close to the existing maximum. κ = 1.5 was therefore preferred.  
+  
+- Function 5: Successive queries have increased the best output from 1088.86 to 2329.02, 2765.82 and now 4595.48. κ = 1.5 remained closest to this increasingly successful region and predicted an output of 4561.79, providing strong justification for continued exploitation.  
+  
+- Function 6: The GP continued to produce identical predictions and uncertainty across the candidate space, making UCB unsuitable regardless of κ. The previous SVM-guided query also failed to improve the best output, so neither approach was automatically retained and an alternative strategy will be investigated.  
+  
+- Function 7: The latest query produced a new best of 2.140. κ = 1.5 and 2.5 selected exactly the same candidate, suggesting that the proposed point was relatively robust to moderate changes in the exploration weighting. κ = 1.5 was provisionally retained.  
+  
+- Function 8: κ had a particularly large influence on candidate selection. The κ = 1.5 candidate had a predicted output of 10.059, above the current best of 9.822, while higher κ values moved substantially further away with lower predicted outputs. Greater exploitation was therefore preferred following the unsuccessful exploratory query from the previous round.
+
+
+The function-specific assessment resulted in κ = 1.5 being provisionally preferred for Functions 2, 3, 4, 5, 7 and 8. Although the same value was selected across these functions, the reasons differed: some showed evidence supporting exploitation of known high-performing regions, while others had recently received unsuccessful exploratory queries. Function 5 provided the strongest case for exploitation following three successive improvements, while Function 8's κ = 1.5 candidate was notable for having a predicted output above the current observed maximum. Function 1 retained maximum-distance exploration because of its persistent GP issues. No provisional query was selected for Function 6 because its GP remained completely uninformative and the previous SVM-guided query had not improved the best output.
+
+**Step 5 – Compare with Expected Improvement**
+
+Expected Improvement was used as an alternative acquisition function for Functions 2, 3, 4, 5, 7 and 8. Unlike UCB, which directly combines predicted performance and uncertainty using κ, EI estimates the expected improvement of a candidate over the current best observed output. The same 100,000 candidate points used in the κ comparison were evaluated where possible, allowing the EI-selected candidate to be compared with the provisional κ = 1.5 UCB selection. Predicted output, uncertainty and distances from the current best and existing observations were examined to determine whether EI supported a similar exploration–exploitation strategy. Functions 1 and 6 were excluded because their current GP models were not considered sufficiently reliable for acquisition-based selection.
+
+Function 2:     
+EI selected point: [0.730707 0.915532]  
+Predicted output:               0.590106  
+Uncertainty:                    0.095042  
+Expected Improvement:           0.024378  
+Distance from current best:     0.0302  
+Distance from nearest existing: 0.0302  
+Distance from κ=1.5 UCB point:  0.0085  
+
+Function 3:  
+EI selected point: [0.433866 0.716516 0.000863]  
+Predicted output:               -0.031179  
+Uncertainty:                    0.051758  
+Expected Improvement:           0.011821  
+Distance from current best:     0.6086  
+Distance from nearest existing: 0.1788  
+Distance from κ=1.5 UCB point:  0.0228  
+
+Function 4:    
+EI selected point: [0.44374  0.493644 0.40979  0.452219]  
+Predicted output:               -0.309086  
+Uncertainty:                    0.456642  
+Expected Improvement:           0.173102  
+Distance from current best:     0.0918  
+Distance from nearest existing: 0.0918  
+Distance from κ=1.5 UCB point:  0.0000  
+
+Function 5:    
+EI selected point: [0.851064 0.985689 0.919598 0.97933 ]  
+Predicted output:               4561.793859  
+Uncertainty:                    452.311632  
+Expected Improvement:           164.098981  
+Distance from current best:     0.1931  
+Distance from nearest existing: 0.1931  
+Distance from κ=1.5 UCB point:  0.0000  
+ 
+Function 7:  
+EI selected point: [0.154752 0.313081 0.341855 0.169387 0.318877 0.633022]  
+Predicted output:               2.053815  
+Uncertainty:                    0.212603  
+Expected Improvement:           0.045405  
+Distance from current best:     0.1492  
+Distance from nearest existing: 0.1492  
+Distance from κ=1.5 UCB point:  0.1893  
+  
+Function 8:   
+EI selected point: [0.14854  0.297539 0.20186  0.328776 0.636564 0.500531 0.197949 0.479426]  
+Predicted output:               10.080326  
+Uncertainty:                    0.149570  
+Expected Improvement:           0.251350  
+Distance from current best:     0.5181  
+Distance from nearest existing: 0.5181  
+Distance from κ=1.5 UCB point:  0.2621   
+
+Function-by-function interpretation:  
+- Function 2: EI selected a point only 0.0085 from the κ = 1.5 UCB candidate. Both methods therefore strongly favour the same region close to the current best, providing good evidence for greater exploitation.  
+- Function 3: EI and UCB were also very similar, with their candidates only 0.0228 apart. Despite being some distance from the current best, both methods independently identify approximately the same region as promising.  
+- Function 4: EI selected exactly the same candidate as κ = 1.5 UCB. This strengthens the case for the more exploitative point and provides further evidence against the much more exploratory κ = 3.5 alternative.  
+- Function 5: EI and κ = 1.5 UCB again selected exactly the same point. Combined with three successive improvements in the same broader region, this provides particularly strong support for retaining this candidate.  
+- Function 7: EI and UCB differed more substantially, with a distance of 0.1893 between their candidates. EI remained slightly closer to the current best and predicted 2.054, while the UCB candidate had a slightly lower predicted output of 1.959 but greater uncertainty. Both therefore represent relatively local searches, but with different exploration–exploitation balances.  
+- Function 8: EI selected a different point from UCB, but importantly predicted an output of 10.080, slightly higher than UCB's 10.059, with lower uncertainty. Both exceed the current observed best of 9.822, suggesting that the GP identifies this broader region as particularly promising. EI may therefore be the stronger candidate to consider for this function.  
+
+
+The Expected Improvement comparison broadly supported the more exploitative strategy identified through the κ analysis. For Functions 2 and 3, EI selected points very close to the κ = 1.5 UCB candidates, while for Functions 4 and 5 the two acquisition methods selected exactly the same points. This provides additional confidence that these regions offer a favourable balance between predicted performance and uncertainty. Function 7 showed greater disagreement between the methods, although both candidates remained relatively close to the current best region. Function 8 also produced different candidates, but both UCB and EI predicted outputs above the current observed maximum. Overall, the agreement between the two acquisition functions supports the decision to reduce the emphasis on exploration for several functions at this stage of the optimisation.
+
+**Step 5b – Alternative strategies for Functions 1 and 6**
+
+Functions 1 and 6 required separate treatment because their Gaussian Process models were not sufficiently reliable for UCB or EI selection. Function 1 retained maximum-distance exploration, continuing the strategy used in previous rounds. For Function 6, the previous SVM-guided query did not improve the best result and the current GP remained completely flat. Maximum-distance exploration was therefore also tested as a simple model-independent alternative. For both functions, 100,000 candidate points were generated and the candidate with the greatest distance from its nearest existing observation was selected, targeting relatively unexplored areas without relying on unreliable model predictions.
+
+Function 1:  
+Maximum-distance exploration point: [0.41743  0.463246]  
+Distance from nearest existing: 0.3153  
+Distance from current best:      0.4137  
+  
+Function 6:   
+Maximum-distance exploration point: [0.033216 0.058439 0.124012 0.011504 0.042834]  
+Distance from nearest existing: 0.8782  
+Distance from current best:      0.8810  
+
+Maximum-distance exploration identified new candidates for both functions without relying on their problematic GP models. For Function 1, the selected point was 0.315 from its nearest existing observation, providing further exploration of an under-sampled region. Function 6 produced a much more exploratory candidate, with a nearest-observation distance of 0.878 and a distance of 0.881 from the current best. Given the higher dimensionality of Function 6 and the failure of the previous SVM-guided query to improve performance, this provides an opportunity to collect information from a substantially different region of the search space.
+
+Step 5 summary:  
+Overall, Step 5 provided additional support for the provisional UCB choices while also providing model-independent alternatives for the two problematic functions. EI closely agreed with κ = 1.5 UCB for Functions 2–5, including identical selections for Functions 4 and 5, while Functions 7 and 8 showed greater differences between acquisition methods. Maximum-distance exploration provided viable alternatives for Functions 1 and 6, where GP-based acquisition remained unsuitable. These results provide a complete set of candidate strategies to take forward to final selection.
+
+**Step 6 – Final selection and validation**
+
+The final query for each function was selected by combining the evidence from recent performance, GP diagnostics, the κ comparison and Expected Improvement. Where UCB and EI proposed very similar points, preference was given to the candidate with the stronger predicted output while maintaining a sensible level of uncertainty. Functions with repeated improvements were treated more exploitatively, while Functions 1 and 6 retained model-independent exploration because their Gaussian Process models remained unreliable. The final eight points were then checked for valid bounds, duplicate observations and distance from the existing dataset before submission.
+
+By function:
+- Function 1 – Maximum-distance exploration: Retained because the RBF GP remains unreliable across successive rounds. The new point explores another poorly sampled part of the space.
+- Function 2 – EI: EI and κ = 1.5 UCB selected almost identical regions, but EI predicted a slightly stronger output (0.590 vs 0.556) and remained very close to the current best. EI therefore provides the more exploitative choice.
+- Function 3 – EI: EI and κ = 1.5 UCB were again very similar. EI produced the slightly stronger predicted output (−0.031 vs −0.034), so it was preferred.
+- Function 4 – EI/UCB agreement: Both methods selected exactly the same candidate, providing strong support for the point.
+- Function 5 – EI/UCB agreement: Both methods again selected exactly the same point. Combined with three consecutive improvements, this is the strongest-supported query in the current round.
+- Function 6 – Maximum-distance exploration: The GP remained completely flat and the previous SVM-guided query failed to improve the maximum. A model-independent exploratory point was therefore preferred to repeating an unsuccessful model-based strategy.
+- Function 7 – EI: The latest round produced a new best. EI remained closer to that successful region and predicted a stronger output than the UCB alternative, so greater exploitation was preferred.
+- Function 8 – EI: Both EI and κ = 1.5 UCB predicted improvement over the current best, but EI predicted the slightly higher value (10.080) with lower uncertainty. EI was therefore selected.
+
+Function 1:   
+Selected point: [0.41743  0.463246]  
+Selection method: Maximum-distance exploration  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.315336  
+Distance from current best:      0.413652  
+
+Function 2:     
+Selected point: [0.730707 0.915532]  
+Selection method: Expected Improvement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.030161  
+Distance from current best:      0.030161  
+
+Function 3:  
+Selected point: [0.433866 0.716516 0.000863]  
+Selection method: Expected Improvement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.178778  
+Distance from current best:      0.608589  
+
+Function 4:    
+Selected point: [0.44374  0.493644 0.40979  0.452219]  
+Selection method: EI / UCB agreement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.091845  
+Distance from current best:      0.091845  
+
+Function 5:    
+Selected point: [0.851064 0.985689 0.919598 0.97933 ]  
+Selection method: EI / UCB agreement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.193062  
+Distance from current best:      0.193062  
+
+Function 6:  
+Selected point: [0.033216 0.058439 0.124012 0.011504 0.042834]  
+Selection method: Maximum-distance exploration  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.878156  
+Distance from current best:      0.880958  
+
+Function 7:  
+Selected point: [0.154752 0.313081 0.341855 0.169387 0.318877 0.633022]  
+Selection method: Expected Improvement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.149214  
+Distance from current best:      0.149214  
+  
+Function 8:   
+Selected point: [0.14854  0.297539 0.20186  0.328776 0.636564 0.500531 0.197949 0.479426]  
+Selection method: Expected Improvement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.518070  
+Distance from current best:      0.518070  
+
+The final validation confirmed that all eight proposed queries were within the permitted input range and did not duplicate any existing observations. Functions 2, 4, 5 and 7 remained relatively close to their current best points, which is consistent with the greater exploitation emphasis introduced this week. Function 3 and especially Function 8 retained a stronger exploratory element despite being selected through Expected Improvement. Functions 1 and 6 were the most exploratory by design, reflecting the continuing limitations of their Gaussian Process models. Overall, the final selections provide a mixture of exploitation in functions with established promising regions and model-independent exploration where the surrogate models remain unreliable.  
+Function 6 represents the highest-risk selection this round because it lies substantially further from existing observations; however, this was a deliberate choice to gather information from a genuinely unexplored region after both the GP and previous SVM-guided approach provided limited useful guidance.
 
 
 
