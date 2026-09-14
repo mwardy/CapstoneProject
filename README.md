@@ -1728,11 +1728,669 @@ The final validation confirmed that all eight proposed queries were within the p
 Function 6 represents the highest-risk selection this round because it lies substantially further from existing observations; however, this was a deliberate choice to gather information from a genuinely unexplored region after both the GP and previous SVM-guided approach provided limited useful guidance.
 
 
+**Module 15 - Week 4**
+
+**Methodology**
+
+The strategy continues the gradual development used throughout the project. After establishing GP + UCB as a baseline, diagnosing problematic functions, introducing SVM classification and then comparing UCB settings with Expected Improvement, this iteration introduces a neural network as an alternative surrogate. Rather than increasing complexity for its own sake, the aim is to test whether a different model can identify useful patterns in the growing datasets and whether its recommendations support or challenge those produced by the Gaussian Process.
+
+Step 1 – Update and evaluate the data
+The outputs returned from the fourth query will be paired with the points submitted last week and added to each function's dataset. The new results will be compared with the previous best values to identify which queries improved performance and whether the strategies used last week were successful.
+
+Step 2 – Refit and diagnose the Gaussian Processes
+An RBF Gaussian Process will be refitted to each updated dataset. The fitted length scales and variation in predicted mean and uncertainty will be examined to determine whether each GP is providing meaningful information. Particular attention will again be given to Functions 1 and 6, where the GP has previously struggled.
+
+Step 3 – Generate GP-based candidates
+For functions with reliable GP models, new candidate points will be generated using the acquisition strategies that performed well in previous rounds. Expected Improvement and a relatively exploitative UCB setting will be compared, using the growing history of results to decide whether each function should favour exploration or exploitation.
+
+Step 4 – Introduce a neural-network surrogate
+A simple neural network will be trained for each function as a secondary surrogate model. The network will learn the relationship between the existing input coordinates and observed outputs. The architecture will initially be kept relatively small because the datasets remain limited, reducing unnecessary complexity and the risk of overfitting.
+
+Step 5 – Compare GP and neural-network recommendations
+Candidate points suggested by the neural networks will be compared with those identified by the GP-based acquisition functions. Agreement between the models may provide additional confidence in a region, while large differences may indicate uncertainty or that the neural network has not yet generalised reliably. The neural network will therefore support rather than automatically replace the GP.
+
+Step 6 – Function-specific final selection
+The final query for each function will be chosen using its individual history, recent performance and model diagnostics. Functions showing repeated improvement around known high-performing regions can be treated more exploitatively, while wider exploration can still be considered where the available models provide weak guidance.
+
+Step 7 – Validate and save
+All eight selected points will be checked to ensure that every coordinate lies between 0 and 1, no point duplicates an existing observation, and the distance from previous observations is sensible for the intended strategy. The updated datasets will then be saved ready for the next iteration.
+
+**Step 1. Update and evaluate the new observations**
+
+The eight outputs returned from the previous round were first paired with their corresponding submitted input points and added to the datasets saved at the end of Week 4. Each new result was then compared with the previous maximum for its function. This provides an initial assessment of how successful last week's function-specific strategies were before the surrogate models are refitted.
+
+Function 1:   
+Previous best: 0.000000  
+New output:    -0.005913  
+Difference:    -0.005913  
+Updated best:  0.000000  
+Result: Did not improve  
+
+Function 2:     
+Previous best: 0.611205  
+New output:    0.507418  
+Difference:    -0.103787  
+Updated best:  0.611205  
+Result: Did not improve  
+
+Function 3:  
+Previous best: -0.020167  
+New output:    -0.107206  
+Difference:    -0.087039  
+Updated best:  -0.020167  
+Result: Did not improve  
+
+Function 4:    
+Previous best: -0.300645  
+New output:    -1.438643  
+Difference:    -1.137998  
+Updated best:  -0.300645  
+Result: Did not improve  
+ 
+Function 5:    
+Previous best: 4595.479318  
+New output:    4857.449601  
+Difference:    261.970283  
+Updated best:  4857.449601  
+Result: NEW BEST  
+
+Function 6:  
+Previous best: -0.458511  
+New output:    -2.043880  
+Difference:    -1.585369  
+Updated best:  -0.458511  
+Result: Did not improve  
+
+Function 7:  
+Previous best: 2.139551  
+New output:    2.536939  
+Difference:    0.397388  
+Updated best:  2.536939  
+Result: NEW BEST  
+  
+Function 8:   
+Previous best: 9.821986  
+New output:    9.911249  
+Difference:    0.089263  
+Updated best:  9.911249  
+Result: NEW BEST  
+
+Three of the eight queries produced new best outputs. Function 5 improved from 4595.48 to 4857.45, continuing the strong upward trend seen over recent iterations. Function 7 also improved from 2.14 to 2.54, while Function 8 produced a smaller improvement from 9.82 to 9.91. These results provide encouraging evidence for the more exploitative EI-based strategy used for these functions last week. Functions 2, 3 and 4 did not improve despite also being selected using EI, showing that agreement with the surrogate model does not guarantee improvement. Function 1 again failed to improve under maximum-distance exploration, while the highly exploratory Function 6 query performed substantially worse than its existing best. This suggests that repeating aggressive maximum-distance exploration for Function 6 may not be appropriate in the next round.
+
+**Step 2. Refit and diagnose the GPs**
+
+The Gaussian Process models were refitted using all observations available after adding the latest returned query results. The same RBF kernel and optimisation settings used in previous rounds were retained so that changes in the fitted models could be attributed to the additional data rather than a change in methodology. The fitted length scales were then inspected for each function, with particular attention to Functions 1 and 6, which have previously shown unstable or uninformative GP behaviour.
+
+Function 1:   
+Fitted kernel: RBF(length_scale=1e-05)  
+
+Function 2:     
+Fitted kernel: RBF(length_scale=0.0494)  
+
+Function 3:  
+Fitted kernel: RBF(length_scale=0.173)  
+
+Function 4:    
+Fitted kernel: RBF(length_scale=0.414)  
+
+Function 5:    
+Fitted kernel: RBF(length_scale=0.467)  
+
+Function 6:  
+Fitted kernel: RBF(length_scale=1e-05)  
+
+Function 7:  
+Fitted kernel: RBF(length_scale=0.33)  
+  
+Function 8:   
+Fitted kernel: RBF(length_scale=0.979)  
+
+Refitting the Gaussian Processes with the latest observations produced sensible RBF length scales for six of the eight functions. Functions 2–5, 7 and 8 fitted length scales between 0.049 and 0.979, suggesting that the models continue to identify structure in their observed data. Functions 1 and 6 again converged to the lower length-scale bound of 1e-05 and generated convergence warnings. This is consistent with their behaviour in the previous iteration and indicates that the additional observations have not resolved the underlying GP fitting problem. These two functions therefore require further diagnostics before GP-based acquisition functions are used.
+
+**Step 2B. Prediction and uncertainty diagnostics**
+
+Because a fitted length scale alone does not determine whether a Gaussian Process provides useful guidance, the models were next evaluated across a large random candidate set. For each function, the range of predicted means and predictive uncertainty was measured. A model that produces meaningful variation across candidate points can potentially distinguish promising regions, whereas near-identical predictions across the search space would make acquisition-based candidate selection unreliable.
+
+Function 1:   
+Predicted mean minimum: -0.0006799102  
+Predicted mean maximum: -0.0000000377  
+Predicted mean range:   0.0006798725  
+
+Uncertainty minimum:    0.0000181309  
+Uncertainty maximum:    0.0017215356  
+Uncertainty range:      0.0017034047   
+
+Function 2:     
+Predicted mean minimum: -0.0822506899  
+Predicted mean maximum: 0.6168811209  
+Predicted mean range:   0.6991318109  
+
+Uncertainty minimum:    0.0000031216  
+Uncertainty maximum:    0.2374310817  
+Uncertainty range:      0.2374279601  
+
+Function 3:  
+Predicted mean minimum: -0.3973810066  
+Predicted mean maximum: -0.0082630242  
+Predicted mean range:   0.3891179823  
+
+Uncertainty minimum:    0.0000008049  
+Uncertainty maximum:    0.0779100026  
+Uncertainty range:      0.0779091977   
+
+Function 4:    
+Predicted mean minimum: -34.4842397129  
+Predicted mean maximum: -0.0236981328  
+Predicted mean range:   34.4605415801  
+
+Uncertainty minimum:    0.0000826978  
+Uncertainty maximum:    7.3165011327  
+Uncertainty range:      7.3164184349  
+
+Function 5:    
+Predicted mean minimum: -1205.5152412033  
+Predicted mean maximum: 5058.7148250304  
+Predicted mean range:   6264.2300662337  
+
+Uncertainty minimum:    0.0139380635  
+Uncertainty maximum:    1228.8268239542  
+Uncertainty range:      1228.8128858907  
+
+Function 6:  
+Predicted mean minimum: -2.6603226817  
+Predicted mean maximum: -1.5106078009  
+Predicted mean range:   1.1497148808  
+
+Uncertainty minimum:    0.0247412070  
+Uncertainty maximum:    0.5346355207  
+Uncertainty range:      0.5098943138  
+
+Function 7:  
+Predicted mean minimum: -0.0687460326  
+Predicted mean maximum: 2.4187016929  
+Predicted mean range:   2.4874477256  
+
+Uncertainty minimum:    0.0000065315  
+Uncertainty maximum:    0.6423503787  
+Uncertainty range:      0.6423438471   
+  
+Function 8:   
+Predicted mean minimum: 5.1604354842  
+Predicted mean maximum: 9.9614819973  
+Predicted mean range:   4.8010465131  
+
+Uncertainty minimum:    0.0000106207  
+Uncertainty maximum:    0.6690477426  
+Uncertainty range:      0.6690371219  
+
+The prediction diagnostics showed meaningful variation in both predicted outputs and uncertainty for all eight functions. Functions 2–5, 7 and 8 continued to provide clear differentiation between candidate points, supporting their use for GP-based optimisation. Function 1 also produced variation despite its length scale remaining at the lower bound, although its unusual GP fit means its predictions should still be treated cautiously. Most importantly, Function 6 no longer produced identical predictions across the search space. Its predicted mean varied by approximately 1.15 and its uncertainty by 0.51, compared with effectively zero variation in previous rounds. This suggests that the latest exploratory observation, although poor in terms of objective value, has provided useful information to the surrogate model. The Function 6 GP should therefore be reconsidered as a possible source of guidance this week rather than automatically excluded.
+
+**Step 3. Compare GP acquisition strategies**
+
+The GP-based candidate selection was simplified this week using the results from the previous iteration. Rather than repeating the full κ comparison, a lower UCB value of κ = 1.5 was retained as the more exploitative setting and compared directly with Expected Improvement. Both acquisition functions were evaluated on the same 100,000 candidate points for each function so that any differences were due to the acquisition strategy rather than random sampling. Functions 2–8 were included, while Function 1 was held back for comparison with alternative methods because of its continuing GP instability.
+
+**Step 3A. Generate EI and UCB candidates**
+
+Function 2:  
+UCB selected point: [0.713179 0.112872]  
+Predicted output: 0.431873  
+EI selected point:  [0.713092 0.138155]  
+Predicted output: 0.429437  
+Distance between UCB and EI candidates: 0.0253  
+
+Function 3:  
+UCB selected point: [0.414712 0.608726 0.505958]  
+Predicted output: -0.034992  
+EI selected point:  [0.384686 0.478261 0.416295]  
+Predicted output: -0.013239  
+Distance between UCB and EI candidates: 0.1611  
+
+Function 4:  
+UCB selected point: [0.467774 0.324669 0.374707 0.447129]  
+Predicted output: -0.365609  
+EI selected point:  [0.462451 0.342242 0.380323 0.445636]  
+Predicted output: -0.212533  
+Distance between UCB and EI candidates: 0.0193  
+
+Function 5:  
+UCB selected point: [0.975917 0.983441 0.990513 0.948800]  
+Predicted output: 4895.382638  
+EI selected point:  [0.938942 0.989452 0.984552 0.971823]  
+Predicted output: 5007.171751  
+Distance between UCB and EI candidates: 0.0444  
+
+Function 6:  
+UCB selected point: [0.982408 0.040400 0.122787 0.464265 0.964442]  
+UCB predicted output: -1.510608  
+EI selected point:  [0.982408 0.040400 0.122787 0.464265 0.964442]  
+EI predicted output: -1.510608  
+Distance between UCB and EI candidates: 0.0000  
+
+Function 7:  
+UCB selected point: [0.132842 0.294043 0.285122 0.050957 0.281982 0.619768]  
+UCB predicted output: 2.427148  
+EI selected point:  [0.132842 0.294043 0.285122 0.050957 0.281982 0.619768]  
+EI predicted output: 2.427148  
+Distance between UCB and EI candidates: 0.0000  
+
+Function 8:  
+UCB selected point: [0.303661 0.221402 0.038340 0.552794 0.966939 0.042888 0.140457 0.049640]  
+Predicted output: 9.632442  
+EI selected point:  [0.289602 0.316966 0.042193 0.143128 0.616869 0.054183 0.288523 0.512239]  
+Predicted output: 9.915401  
+Distance between UCB and EI candidates: 0.7320  
+
+Comparing Expected Improvement with UCB at κ = 1.5 produced varying levels of agreement across the functions. Functions 2, 4, 5 and 7 produced similar or identical recommendations, suggesting relatively consistent GP guidance. Function 3 showed moderate disagreement, although both methods remained reasonably close to the current best region. Function 8 showed the largest difference, with UCB selecting a substantially more exploratory point while EI remained closer to the successful region identified last week. Function 6 produced identical UCB and EI candidates, but the selected point was very distant from the current best and existing observations. Given the continuing length-scale warning for Function 6, this agreement should not automatically be interpreted as strong evidence for the candidate.
+
+Function-by-function interpretation:
+- F2: Very strong agreement. The candidates are only 0.0253 apart. Interestingly, both methods have moved away from the current best into a different region around [0.71, 0.12–0.14]. That looks like a genuine feature of the GP rather than the acquisition function.  
+- F3: Moderate disagreement (0.1611). EI is more exploitative, sitting only 0.1325 from the current best and predicting −0.0132, which is actually better than the current observed best of −0.0202. EI looks particularly interesting here.  
+- F4: Very strong agreement (0.0193). EI is slightly closer to the current best and predicts −0.213, again better than the observed best of −0.301. Good candidate region.  
+- F5: Strong agreement (0.0444) around the region that has repeatedly produced improvements. EI predicts 5007.17, above the new observed best of 4857.45. Given F5's recent history, I'd continue favouring exploitation here.  
+- F6: This needs caution. UCB and EI select exactly the same point, which initially looks convincing. However, look at the prediction: −1.510608. That's essentially the GP's background prediction from our diagnostics, and the point is a huge 1.31 away from the current best. This looks much more like an artefact of the unusual GP fit than a genuinely promising optimum. I would not submit this point based on the GP agreement alone.  
+- F7: Excellent agreement — literally the same point. It's only 0.1401 from the new best region. Given that last week's EI query produced another improvement, this is currently one of our strongest candidates.  
+- F8: Very different recommendations (0.7320 apart). UCB is taking a much bigger exploratory step, whereas EI stays closer to the region that just gave us a new best. Since last week's EI selection succeeded, EI currently looks more compelling, although we'll wait for the NN comparison.  
+
+**Step 3B. Provisional GP strategy by function**
+
+The UCB and Expected Improvement results were then interpreted function by function rather than selecting one acquisition method uniformly. The provisional choice considered agreement between the two methods, predicted output, recent query performance and proximity to known high-performing regions. These selections were not treated as final decisions, because the neural-network surrogate introduced in the next step will provide an independent comparison.
+
+Provisional interpretation:   
+- F2: UCB and EI are very close and both point to a different low-\(x_2\) region. Treat this as a credible alternative region worth further comparison.  
+- F3: EI currently looks stronger because it predicts -0.013239, above the current best of -0.020167, while remaining closer to the best-known region.  
+- F4: Strong agreement between UCB and EI; EI has the stronger predicted mean. Provisional preference: EI.  
+- F5: Strong agreement in the same successful region, with EI predicting 5007.17, above the current best 4857.45. Provisional preference: EI.  
+- F6: Although UCB and EI agree exactly, the candidate is extremely far from the current best and the GP still has a problematic 1e-05 length scale. No GP candidate should be trusted yet.  
+- F7: UCB and EI select exactly the same point close to the new best region. Strong provisional candidate.  
+- F8: UCB and EI disagree substantially. Given that last week's EI query produced a new best, EI is provisionally preferred.  
+
+The GP acquisition comparison produced strong provisional candidates for Functions 3, 4, 5, 7 and 8, with Expected Improvement generally favoured where it offered stronger predicted performance or remained closer to recently successful regions. Function 2 showed close agreement between UCB and EI on a distinctly different region of the search space, making it a useful candidate for further comparison. Function 6 remained unresolved because its acquisition methods agreed on a highly exploratory point despite the GP continuing to show an unstable length-scale fit. These provisional decisions will now be compared with an independent neural-network surrogate before final query selection.
+
+**Step 4a: train a small PyTorch network for each function and check whether training looks stable.**
+
+A simple neural-network surrogate was introduced as a secondary modelling approach rather than replacing the Gaussian Process. Because the available datasets are still relatively small, the architecture was deliberately kept compact, using two hidden layers with 16 neurons in each layer and ReLU activation functions. Inputs and outputs were standardised before training so that functions with very different numerical scales could be handled consistently. Five independently initialised networks were trained for each function and their predictions averaged, reducing dependence on a single random initialisation. The resulting ensemble predictions were then used as an additional source of evidence when identifying promising regions of the search space.
+
+Function 1:  
+Mean final training loss: 0.001044  
+Minimum final training loss: 0.000000  
+Maximum final training loss: 0.005221  
+
+Function 2:  
+Mean final training loss: 0.002267  
+Minimum final training loss: 0.000000  
+Maximum final training loss: 0.010432  
+
+Function 3:  
+Mean final training loss: 0.000001  
+Minimum final training loss: 0.000000  
+Maximum final training loss: 0.000003  
+
+Function 4:  
+Mean final training loss: 0.000000    
+Minimum final training loss: 0.000000  
+Maximum final training loss: 0.000001  
+
+Function 5:  
+Mean final training loss: 0.000004  
+Minimum final training loss: 0.000000  
+Maximum final training loss: 0.000016  
+
+Function 6:  
+Mean final training loss: 0.000013  
+Minimum final training loss: 0.000000  
+Maximum final training loss: 0.000034  
+
+Function 7:  
+Mean final training loss: 0.000000  
+Minimum final training loss: 0.000000  
+Maximum final training loss: 0.000002  
+
+Function 8:  
+Mean final training loss: 0.000000  
+Minimum final training loss: 0.000000  
+Maximum final training loss: 0.000000  
+
+The neural networks achieved very low training losses across all eight functions. Functions 3–8 were fitted almost perfectly, while Functions 1 and 2 showed slightly greater variation between the five independently initialised networks. Although this demonstrates that the compact architecture has sufficient flexibility to represent the observed data, the extremely low losses may also indicate overfitting given the relatively small datasets. Training performance alone is therefore insufficient to determine whether the neural networks provide reliable surrogate models, and their ability to generalise to unseen observations will be assessed before using them for candidate selection.
+
+**Step 4B. Test generalisation**
+
+Because the neural networks achieved extremely low training losses, Leave-One-Out Cross-Validation was used to assess whether they could generalise beyond the observations used for training. Each observation was removed in turn, the remaining observations were used to train the network, and the held-out output was predicted. Performance was measured using mean absolute error and compared with a simple baseline that predicted the mean of the remaining training outputs. This provides a more cautious assessment of whether the neural network contains useful predictive information before it is used to propose new queries.
+
+Function 1:  
+NN LOOCV MAE:       0.002595  
+Mean baseline MAE:  0.001255  
+NN beats baseline:  False  
+
+Function 2:  
+NN LOOCV MAE:       0.188740  
+Mean baseline MAE:  0.225146  
+NN beats baseline:  True  
+
+Function 3:  
+NN LOOCV MAE:       0.066222  
+Mean baseline MAE:  0.046560  
+NN beats baseline:  False  
+
+Function 4:  
+NN LOOCV MAE:       1.998674  
+Mean baseline MAE:  6.651296  
+NN beats baseline:  True  
+
+Function 5:  
+NN LOOCV MAE:       192.581456  
+Mean baseline MAE:  1041.351340  
+NN beats baseline:  True  
+
+Function 6:  
+NN LOOCV MAE:       0.327649  
+Mean baseline MAE:  0.453136  
+NN beats baseline:  True  
+
+Function 7:  
+NN LOOCV MAE:       0.315686  
+Mean baseline MAE:  0.474058  
+NN beats baseline:  True  
+
+Function 8:  
+NN LOOCV MAE:       0.328345  
+Mean baseline MAE:  0.900332  
+NN beats baseline:  True  
+
+Leave-One-Out Cross-Validation showed that the neural networks generalised better than the mean baseline for six of the eight functions. The strongest relative improvements were observed for Functions 4, 5 and 8, while Functions 2, 6 and 7 also outperformed the baseline. Functions 1 and 3 did not outperform the baseline, suggesting that their extremely low training losses were not matched by reliable predictions on unseen observations. Neural-network recommendations will therefore be treated as useful secondary evidence for Functions 2, 4, 5, 6, 7 and 8, but will not be relied upon for Functions 1 and 3.
+
+**Step 4C. Generate NN candidates**
+
+The five neural networks trained for each function were next used to evaluate 100,000 randomly generated candidate points. Predictions from the independently initialised networks were converted back to the original output scale and averaged, with the candidate having the highest mean predicted output selected. The standard deviation between network predictions was also recorded as a simple measure of model disagreement. Neural-network candidates were generated for all functions for comparison, although recommendations for Functions 1 and 3 were treated cautiously because their networks did not outperform the baseline during cross-validation.
+
+Function 1:  
+NN selected point: [9.78948e-01 6.56000e-04]  
+NN predicted output:             0.004556  
+NN model disagreement:          0.001415  
+Distance from current best:     0.7732  
+Distance from nearest existing: 0.2982   
+
+Function 2:  
+NN selected point: [9.98493e-01 5.18000e-04]  
+NN predicted output:             1.116515  
+NN model disagreement:          0.831745  
+Distance from current best:     0.9722  
+Distance from nearest existing: 0.3549  
+
+Function 3:  
+NN selected point: [0.297078 0.002134 0.846217]  
+NN predicted output:             0.000985  
+NN model disagreement:          0.027674  
+Distance from current best:     0.5262  
+Distance from nearest existing: 0.3477  
+
+Function 4:  
+NN selected point: [0.394245 0.436007 0.403516 0.426489]  
+NN predicted output:             -0.570388  
+NN model disagreement:          0.191094  
+Distance from current best:     0.0578  
+Distance from nearest existing: 0.0578  
+
+Function 5:  
+NN selected point: [0.937033 0.990945 0.91798  0.998735]  
+NN predicted output:             5001.947266  
+NN model disagreement:          90.387283  
+Distance from current best:     0.0883  
+Distance from nearest existing: 0.0883  
+
+Function 6:  
+NN selected point: [0.248909 0.369411 0.484746 0.674732 0.011701]  
+NN predicted output:             -0.403257  
+NN model disagreement:          0.039523  
+Distance from current best:     0.0659  
+Distance from nearest existing: 0.0659  
+
+Function 7:  
+NN selected point: [0.028519 0.317694 0.105297 0.051944 0.24629  0.446805]  
+NN predicted output:             2.835739  
+NN model disagreement:          0.333867  
+Distance from current best:     0.3545  
+Distance from nearest existing: 0.3545  
+
+Function 8:  
+NN selected point: [0.034135 0.275291 0.032179 0.508682 0.760754 0.61795  0.034127 0.34942 ]  
+NN predicted output:             10.356458  
+NN model disagreement:          0.134738  
+Distance from current best:     0.3843  
+Distance from nearest existing: 0.3843  
+
+Function-by-function interpretation:  
+
+Function 1: The neural network selected a relatively exploratory point and predicted an output of 0.00456, which would exceed the current best. However, the network failed to outperform the mean baseline during cross-validation, so this prediction is not considered sufficiently reliable for query selection.  
+
+Function 2: The neural network predicted a potentially large improvement to 1.1165, but the selected point was far from the current best and disagreement between the five networks was very high at 0.8317. Despite the network outperforming the baseline during cross-validation, this individual recommendation therefore appears unreliable and the GP currently provides stronger guidance.  
+
+Function 3: The neural network predicted a small positive output of 0.00099, potentially exceeding the current best of −0.0202. However, the network failed to outperform the baseline during cross-validation, so its recommendation will not be prioritised over the GP-based candidates.  
+
+Function 4: The neural-network candidate was only 0.0578 from the current best point and remained within the same general high-performing region identified by the GP. Although its predicted output of −0.5704 does not exceed the existing best, the agreement in location provides additional support for continued exploitation of this region.  
+
+Function 5: The neural network produced one of the strongest recommendations, selecting a point only 0.0883 from the current best and predicting an output of 5001.95. This is above the existing best of 4857.45 and is in a similar region to the promising EI and UCB candidates, providing independent support for continued exploitation.  
+
+Function 6: The neural network selected a point only 0.0659 from the current best and predicted an improved output of −0.4033, with relatively low disagreement of 0.0395 between networks. As the neural network also outperformed the baseline during cross-validation, this provides a potentially useful alternative to the much more exploratory and less convincing GP recommendation.  
+
+Function 7: The neural network predicted an improvement to 2.8357 but selected a moderately more exploratory point, 0.3545 from the current best, with some disagreement between the individual networks. The recommendation is therefore promising, although the closer agreement between EI and UCB around the recently successful region currently provides stronger evidence.  
+
+Function 8: The neural network selected a moderately exploratory point and predicted an improvement from the current best of 9.9112 to 10.3565. The network performed well relative to the baseline during cross-validation and disagreement between the five networks was relatively modest, making this a credible alternative to the EI recommendation.  
+
+Overview:  
+The neural-network candidates varied considerably in both their location and apparent reliability. Functions 4, 5 and 6 produced recommendations close to existing high-performing regions, while Functions 7 and 8 suggested moderately more exploratory points with predicted outputs above their current best values. Function 5 was particularly encouraging, with the neural network independently identifying a similar high-performing region to the GP models and predicting an output of approximately 5002. Function 6 also produced a candidate close to the current best with relatively low disagreement between the five networks, providing a useful alternative to the highly exploratory GP recommendation. In contrast, Functions 1 and 2 produced highly exploratory neural-network candidates, and Function 2 showed particularly high disagreement between networks. Combined with the earlier cross-validation results, these findings demonstrate the importance of using the neural network as supporting evidence rather than automatically selecting its highest predicted point.  
+
+**Step 5. Direct model comparison**
+
+The GP and neural-network recommendations were compared to assess whether the different surrogate approaches identified similar promising regions. Function 1 had initially been excluded from GP-based candidate selection because its RBF length scale remained at the lower bound. However, after its neural network also failed to outperform the baseline during cross-validation, the GP was reconsidered as an additional source of evidence. UCB and Expected Improvement candidates were therefore generated for Function 1 using the same settings as the other functions. For all eight functions, Euclidean distance was then calculated between the NN, UCB and EI recommendations. Model agreement was considered alongside GP diagnostics, NN cross-validation performance and previous query results rather than being treated as sufficient evidence on its own.
+
+Function 1:
+UCB (κ = 1.5)
+[0.943533 0.359421]
+Predicted output: -0.000680
+
+EXPECTED IMPROVEMENT
+[0.943533 0.359421]
+Predicted output: -0.000680
+
+Distance between UCB and EI candidates: 0.0000
+
+UCB and EI selected exactly the same candidate for Function 1, although the predicted output of −0.000680 remained below the current best. The agreement provides an additional candidate for comparison, but confidence remains limited because the GP continues to exhibit an unstable length-scale fit.
+
+**Step 5B. Compare all three approaches**
+
+Function 1:  
+NN → UCB distance: 0.3605  
+NN → EI distance:  0.3605  
+UCB → EI distance: 0.0000  
+
+Function 2:  
+NN → UCB distance: 0.3066  
+NN → EI distance:  0.3169  
+UCB → EI distance: 0.0253  
+
+Function 3:  
+NN → UCB distance: 0.7054  
+NN → EI distance:  0.6475  
+UCB → EI distance: 0.1611  
+
+Function 4:  
+NN → UCB distance: 0.1381  
+NN → EI distance:  0.1198  
+UCB → EI distance: 0.0193  
+
+Function 5:  
+NN → UCB distance: 0.0966  
+NN → EI distance:  0.0718  
+UCB → EI distance: 0.0444  
+
+Function 6:  
+NN → UCB distance: 1.3150  
+NN → EI distance:  1.3150  
+UCB → EI distance: 0.0000  
+
+Function 7:  
+NN → UCB distance: 0.2738  
+NN → EI distance:  0.2738  
+UCB → EI distance: 0.0000  
+
+Function 8:  
+NN → UCB distance: 0.7429  
+NN → EI distance:  0.7940  
+UCB → EI distance: 0.7320  
+
+Function-by-function interpretation:  
+
+Function 1: UCB and EI selected exactly the same candidate, while the NN recommendation was 0.3605 away. However, both models have reliability concerns: the GP continues to hit its lower length-scale bound and the NN failed to outperform the baseline during cross-validation. The GP agreement therefore provides some additional evidence, but F1 remains a relatively uncertain selection.  
+
+Function 2: UCB and EI were extremely close (0.0253), whereas the NN was approximately 0.31 from both. The NN candidate also showed very high disagreement between its five networks. The GP recommendation therefore provides the stronger evidence for this function.  
+
+Function 3: The NN candidate was substantially separated from both GP recommendations and the NN failed to outperform the baseline during cross-validation. The GP therefore remains the preferred modelling approach, with EI providing the stronger provisional candidate.  
+
+Function 4: All three approaches identified broadly similar regions. UCB and EI were only 0.0193 apart, while the NN was 0.1198 from EI. Combined with the NN's strong cross-validation performance, this provides useful independent support for continued exploitation around the existing high-performing region.  
+
+Function 5: This produced the strongest multi-model agreement. The NN was only 0.0718 from EI and 0.0966 from UCB, with the two GP candidates themselves only 0.0444 apart. Together with the repeated improvements in observed output, this provides strong evidence that the models are converging on a genuinely promising region.  
+
+Function 6: UCB and EI selected the same candidate, but the NN recommendation was 1.3150 away. Given the continuing GP length-scale problem, the poor result from last week's distant exploration and the NN's successful cross-validation performance, the NN recommendation currently appears more credible than the GP agreement.  
+
+Function 7: UCB and EI again selected exactly the same point, while the NN candidate was 0.2738 away. Both models have some supporting evidence, but the GP recommendation remains closer to the recently successful region and therefore currently provides the stronger candidate.  
+
+Function 8: All three approaches differed substantially, with UCB and EI 0.7320 apart and the NN more than 0.74 from both. Unlike some of the other disagreements, the NN performed well in cross-validation and predicted an improvement, while last week's EI selection also successfully produced a new best. There is therefore credible evidence for both EI and the NN, requiring a more careful final choice.  
+
+Summary:  
+The comparison showed that agreement between the GP and neural-network approaches varied substantially between functions. Functions 4 and 5 showed the strongest overall agreement, with all three recommendations concentrated within relatively similar regions. Functions 1 and 7 showed complete agreement between UCB and EI but greater separation from the neural network, while Function 2 also showed close agreement between the two GP acquisition methods. Functions 3, 6 and 8 displayed considerably greater disagreement between modelling approaches. Function 6 produced the clearest conflict, with the neural-network candidate 1.3150 from the identical UCB/EI recommendation, while Function 8 showed substantial separation between all three candidates. These results support retaining a function-specific selection strategy rather than applying a single model uniformly across all eight functions.
+
+**Step 6. Final function-specific selection**
+
+Before selecting the final queries, the leading model recommendations were compared with the existing observations surrounding each candidate. For each UCB, EI and neural-network recommendation, the nearest observed points and their outputs were examined. This provides a final check that model predictions are consistent with the available empirical evidence and helps distinguish genuine high-performing regions from potentially unreliable extrapolation. The final selection for each function will therefore combine model recommendations, model reliability, recent query performance and the behaviour of nearby observations.
+
+Function 1:  
+UCB/EI nearest observation: Distance 0.1400 | Output 0.000000  
+NN nearest observation:     Distance 0.2982 | Output 0.000000  
+
+Function 2:  
+UCB nearest observation:    Distance 0.0487 | Output 0.538996  
+EI nearest observation:     Distance 0.0494 | Output 0.538996  
+NN nearest observation:     Distance 0.3549 | Output 0.538996  
+
+Function 3:  
+UCB nearest observation:    Distance 0.1832 | Output -0.034835  
+EI nearest observation:     Distance 0.1325 | Output -0.020167  
+NN nearest observation:     Distance 0.3477 | Output -0.118048  
+
+Function 4:  
+UCB nearest observation:    Distance 0.1303 | Output -0.300645  
+EI nearest observation:     Distance 0.1142 | Output -0.300645  
+NN nearest observation:     Distance 0.0578 | Output -0.300645  
+
+Function 5:  
+UCB nearest observation:    Distance 0.1468 | Output 4857.449601  
+EI nearest observation:     Distance 0.1096 | Output 4857.449601  
+NN nearest observation:     Distance 0.0883 | Output 4857.449601  
+
+Function 6:  
+UCB/EI nearest observation: Distance 0.7451 | Output -1.144785  
+NN nearest observation:     Distance 0.0659 | Output -0.458511  
+
+Function 7:  
+UCB/EI nearest observation: Distance 0.1401 | Output 2.536939  
+NN nearest observation:     Distance 0.3545 | Output 2.536939  
+
+Function 8:  
+UCB nearest observation:    Distance 0.7299 | Output 9.821986  
+EI nearest observation:     Distance 0.4896 | Output 9.821986  
+NN nearest observation:     Distance 0.3843 | Output 9.911249  
+
+Function-by-function interpretation:  
+
+Function 1: The GP candidate was closer to an existing observation than the NN candidate, but both surrogate approaches have reliability concerns. The common UCB/EI candidate was therefore provisionally preferred, although confidence remains low.  
+
+Function 2: Both GP candidates were approximately 0.05 from an observation producing 0.5390, whereas the NN candidate was considerably further away. This reinforces the GP region, with EI provisionally preferred.  
+
+Function 3: EI was only 0.1325 from the current best observation of −0.0202. The NN candidate was further from strong observations and had previously failed cross-validation, strengthening the case for EI.  
+
+Function 4: All three approaches remained close to the current best region. Although the NN candidate was closest, EI moved slightly further from the two recent weaker observations while remaining close to the best, so EI was provisionally preferred.  
+
+Function 5: All three candidates remained close to the sequence of increasingly strong historical observations. Combined with strong agreement between the models, this provides substantial evidence for continued exploitation, with EI provisionally preferred.  
+
+Function 6: The NN candidate was only 0.0659 from the current best observation, compared with 0.7451 for the GP candidate's nearest observation. Combined with the GP fitting problems and successful NN cross-validation, the NN candidate was preferred.  
+
+Function 7: The common UCB/EI candidate was only 0.1401 from the new best and remained close to several other strong observations. This provides stronger empirical support than the more distant NN recommendation.  
+
+Function 8: The NN candidate was closest to the new best observation, at a distance of 0.3843, compared with 0.4896 for EI and 0.7299 for UCB. Together with successful NN cross-validation, this shifted the provisional preference towards the NN candidate.  
+
+Summary:
+The neighbourhood analysis provided additional evidence for distinguishing between competing model recommendations. Functions 2, 3, 5, 6 and 7 had candidates positioned close to relatively strong historical observations, while Function 4 showed that all three approaches remained around the same established high-performing region. The analysis was particularly useful for Function 6, where the neural-network candidate was substantially closer to the current best observation than the GP candidate. For Function 8, the neural-network candidate was also closer to the new best observation than either GP recommendation. Function 1 remained uncertain, although the GP candidate was located closer to previously evaluated points than the neural-network alternative.
+
+The final provisional selections were made using a function-specific combination of surrogate reliability, acquisition behaviour and neighbouring observations. EI was preferred for Functions 2–5, while the identical EI/UCB recommendation was retained for Function 7. The neural network materially influenced the strategy for Functions 6 and 8, where its candidates had stronger empirical support than the GP alternatives. Function 1 remained the least certain, but the common EI/UCB candidate was preferred over the less reliable neural-network recommendation. Overall, the neural network complemented rather than replaced the existing GP framework, allowing the selection strategy to adapt where independent evidence supported doing so.
+
+**Step 7. Final Validation**
+
+The eight provisional query points were subjected to a final validation check before submission. Each point was checked to confirm that all coordinates remained within the permitted [0,1] search space and that it did not duplicate an existing observation. The selected method and distance to the nearest existing observation were also recorded as a final check that each recommendation remained consistent with the function-specific strategy developed during the analysis.
+
+All eight final query points passed the validation checks. Every coordinate remained within the permitted [0,1] search space and none duplicated an existing observation. The final selections reflect the function-specific strategy developed during the analysis, combining Expected Improvement and UCB where the GP provided stronger evidence and neural-network recommendations for Functions 6 and 8 where the alternative surrogate was better supported. The points were therefore considered suitable for submission.
+
+Function 1:  
+Selected point: [0.943533 0.359421]  
+Selection method: EI / UCB agreement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.140043   
+
+Function 2:  
+Selected point: [0.713092 0.138155]  
+Selection method: Expected Improvement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.049374  
+
+Function 3:  
+Selected point: [0.384686 0.478261 0.416295]  
+Selection method: Expected Improvement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.132463  
+
+Function 4:  
+Selected point: [0.462451 0.342242 0.380323 0.445636]  
+Selection method: Expected Improvement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.114172  
+
+Function 5:  
+Selected point: [0.938942 0.989452 0.984552 0.971823]  
+Selection method: Expected Improvement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.109600  
+
+Function 6:  
+Selected point: [0.248909 0.369411 0.484746 0.674732 0.011701]  
+Selection method: Neural Network  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.065893  
+
+Function 7:  
+Selected point: [0.132842 0.294043 0.285122 0.050957 0.281982 0.619768]  
+Selection method: EI / UCB agreement  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.140085  
+
+Function 8:  
+Selected point: [0.034135 0.275291 0.032179 0.508682 0.760754 0.61795  0.034127 0.34942 ]  
+Selection method: Neural Network  
+In bounds: True  
+Duplicate existing point: False  
+Distance to nearest observation: 0.384306  
+
 
 
 So far:
 
-Week 1: establish GP + UCB baseline.
-Week 2: diagnose individual functions and adapt where the GP struggles.
-Week 3: introduce SVMs and use them where they genuinely add information.
-Week 4: investigate whether different κ values improve the exploration–exploitation balance for individual functions.
+Week 1: Establish a Gaussian Process + UCB baseline for all eight functions.
+Week 2: Diagnose function-specific GP behaviour and adapt the strategy where the surrogate model struggles, including testing alternative kernels and greater exploration.
+Week 3: Introduce SVM classification to identify high- and low-performing regions and use it selectively where it adds useful information.
+Week 4: Investigate the exploration–exploitation trade-off by comparing different UCB κ values and Expected Improvement, leading to more function-specific query selection.
+Week 5: Introduce a simple neural-network surrogate as a secondary model and compare its recommendations with the established GP-based approach.
