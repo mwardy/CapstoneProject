@@ -1154,7 +1154,7 @@ F8: GP + UCB
 
 
 
-**Module 15 - Week 4**
+**Module 16 - Week 5**
 
 **Methodology**
 
@@ -2385,7 +2385,7 @@ In bounds: True
 Duplicate existing point: False  
 Distance to nearest observation: 0.384306  
 
-**Module 16 (Week 5)**
+**Module 17 (Week 6)**
 
 **Methodology**
 
@@ -3039,6 +3039,406 @@ Distance to nearest observation: 0.397197
 
 All eight selected candidates passed the final validation checks. Every point remained within the permitted [0,1] input bounds and none duplicated an existing observation. Distances to the nearest existing observations ranged from 0.028637 for Function 5, reflecting deliberate local refinement of its strongly performing region, to 0.397197 for Function 8, where the selected neural-network candidate remains more exploratory. The final validation therefore confirmed that all eight candidates were suitable for submission.
 
+**Module 18 (Week 7)**
+
+**Methodology**
+
+Week 7 builds on the function-specific optimisation strategy developed during the previous rounds. Rather than introducing another new modelling approach, the focus this week is on hyperparameter tuning and testing the robustness of the existing optimisation methods.
+The Gaussian Process remains the primary surrogate model, with Expected Improvement (EI) and Upper Confidence Bound (UCB) used as the main acquisition functions. However, instead of relying on a single fixed acquisition setting, multiple values of the exploration parameters will be tested to examine how sensitive the recommended candidates are to the exploration–exploitation balance.
+The neural-network surrogate introduced in Week 5 will continue to provide an independent comparison where its validation performance supports its use. Candidate selection will therefore remain function-specific and will combine GP predictions, acquisition-function behaviour, neural-network evidence, historical method performance and the observed neighbourhood surrounding each candidate.
+Particular attention will be given to whether different hyperparameter settings converge on similar candidate regions. Agreement across settings will be treated as stronger evidence that a recommendation is robust, while substantial disagreement will indicate greater uncertainty and the need for a more cautious or exploratory selection.
+The final objective is therefore not simply to identify the candidate with the highest acquisition score, but to understand how dependent each recommendation is on the model and hyperparameter assumptions used to generate it.
+
+Steps:
+Step 1 – Add and assess Week 6 results
+Add the eight new observations to the datasets and compare them with the previous bests. Record which methods succeeded or failed to improve each function.
+
+Step 2 – Refit and diagnose the GP models
+Refit each Gaussian Process using the expanded dataset. Review fitted kernels, length scales, prediction ranges and uncertainty to identify any remaining modelling issues.
+
+Step 3 – Tune acquisition hyperparameters
+Test several UCB κ values (0.5, 1.0, 1.5, 2.5) and EI ξ values. Record the candidate, predicted output, uncertainty and acquisition score produced by each setting.
+
+Step 4 – Assess candidate stability
+Compare the candidates produced by different κ and ξ values. Determine whether recommendations remain in similar regions or change substantially as the exploration–exploitation balance is adjusted.
+
+Step 5 – Refit and validate the neural network
+Retrain the NN surrogate using the expanded datasets and repeat the LOOCV comparison against the mean baseline. Only treat the NN as strong evidence where validation supports it.
+
+Step 6 – Compare GP and NN candidates
+Generate NN candidates and compare them with the strongest tuned GP candidates, considering predicted outputs, uncertainty/model disagreement and distances between recommendations.
+
+Step 7 – Check neighbourhood evidence
+Examine the nearest existing observations around the leading candidates to determine whether they are supported by previously strong results or represent more exploratory choices.
+
+Step 8 – Select final candidates
+Choose one point per function using the combined evidence from previous method performance, GP reliability, hyperparameter stability, EI/UCB behaviour, NN validation and local observations.
+
+Step 9 – Final validation and submission
+Check bounds, dimensions, duplicates and six-decimal formatting before generating the eight submission strings.
+
+**Step 1. Add and assess the Week 6 results**
+
+The Week 6 query points and their returned outputs were added to the accumulated dataset for each function. Before fitting any new models, the new results were compared with the previous best observed values. This provides a direct measure of how successful the previous selection strategy was and allows recent method performance to inform the Week 7 candidate-selection process.
+
+Function 1:  
+Previous best: 0.000000  
+New output:    0.000000  
+Difference:    -0.000000  
+Updated best:  0.000000  
+Result:        Did not improve  
+
+Function 2:  
+Previous best: 0.746962  
+New output:    0.471844  
+Difference:    -0.275118  
+Updated best:  0.746962  
+Result:        Did not improve  
+
+Function 3:  
+Previous best: -0.016451  
+New output:    -0.015498  
+Difference:    0.000953  
+Updated best:  -0.015498  
+Result:        NEW BEST  
+
+Function 4:  
+Previous best: -0.300645  
+New output:    -0.200431  
+Difference:    0.100214  
+Updated best:  -0.200431  
+Result:        NEW BEST  
+
+Function 5:  
+Previous best: 6691.931674  
+New output:    7121.151955  
+Difference:    429.220281  
+Updated best:  7121.151955  
+Result:        NEW BEST  
+
+Function 6:  
+Previous best: -0.456874  
+New output:    -0.379740  
+Difference:    0.077134  
+Updated best:  -0.379740  
+Result:        NEW BEST  
+
+Function 7:  
+Previous best: 2.536939  
+New output:    2.929370  
+Difference:    0.392431  
+Updated best:  2.929370  
+Result:        NEW BEST  
+
+Function 8:  
+Previous best: 9.911249  
+New output:    9.840530  
+Difference:    -0.070719  
+Updated best:  9.911249  
+Result:        Did not improve  
+
+Step 1 results: Five of the eight Week 6 queries produced new best observations, providing encouraging evidence that the increasingly function-specific selection strategy is working. Expected Improvement was particularly successful, producing new bests for Functions 3, 4 and 6. Function 4 improved from −0.300645 to −0.200431, while Function 6 improved from −0.456874 to −0.379740. Function 3 also continued its gradual improvement, moving from −0.016451 to −0.015498. Function 5 provided further support for the neural-network surrogate, with the NN-selected candidate increasing the best output from 6691.93 to 7121.15. The UCB/EI agreement candidate for Function 7 was also successful, producing a substantial improvement from 2.536939 to 2.929370.
+The unsuccessful queries are also informative. Expected Improvement did not improve Function 2, with the new output of 0.471844 remaining below the current best of 0.746962. Similarly, the neural-network candidate for Function 8 returned 9.840530, which remained close to but below the best of 9.911249. This is the second consecutive round in which the NN has failed to improve Function 8, suggesting that its recommendations for this function should be treated more cautiously despite reasonable validation performance. Function 1 again returned a value effectively equal to zero, providing little additional evidence about its optimum and reinforcing the difficulty both surrogate approaches have had in modelling this function.
+Overall, the results support continuing with a mixed, function-specific approach rather than selecting one model for all eight functions. In particular, the recent results strengthen the case for EI on Functions 3, 4 and 6 and the NN on Function 5, while Functions 1, 2 and 8 warrant greater scrutiny this week. Function 7's improvement also suggests that agreement between UCB and EI can provide useful evidence when both acquisition functions independently identify the same region.
+
+**Step 2. Refit and diagnose the Gaussian Process models**
+
+The Gaussian Process surrogate for each function was refitted using all observations available at the start of Week 7. The fitted kernel and length scale were examined first to identify whether the additional data had changed the behaviour of the surrogate, particularly for functions that had previously shown convergence issues. The range of predicted means and uncertainty across a large set of candidate points was then assessed to determine how strongly the GP differentiates between regions of the search space. These diagnostics were completed before tuning the acquisition-function hyperparameters so that changes caused by the GP itself could be distinguished from changes caused by κ or ξ.
+
+Function 1:  
+Fitted kernel: RBF(length_scale=1e-05)  
+
+Function 2:  
+Fitted kernel: RBF(length_scale=0.0431)  
+
+Function 3:  
+Fitted kernel: RBF(length_scale=0.193)  
+
+Function 4:  
+Fitted kernel: RBF(length_scale=0.436)  
+
+Function 5:  
+Fitted kernel: RBF(length_scale=0.363)  
+
+Function 6:  
+Fitted kernel: RBF(length_scale=0.558)  
+
+Function 7:  
+Fitted kernel: RBF(length_scale=0.3)  
+
+Function 8:  
+Fitted kernel: RBF(length_scale=1.02)  
+
+The refitted GP models were generally stable following the addition of the Week 6 observations. Functions 2–8 produced finite RBF length scales ranging from 0.0431 to 1.02, while several of the functions that improved last week showed only relatively small changes in their fitted parameters. Function 3 increased from 0.185 to 0.193, Function 4 from 0.423 to 0.436 and Function 6 from 0.535 to 0.558. Function 7 showed a slightly larger increase from 0.248 to 0.300 following its new best result of 2.929370.
+Function 1 remains the clear exception. Its fitted length scale is again fixed at the lower bound of 1e-05, producing the same convergence warning seen previously. This suggests that the RBF GP is still struggling to identify a meaningful smooth relationship between nearby observations for this function. GP recommendations for Function 1 should therefore continue to be treated cautiously rather than interpreted in the same way as those for the other functions.
+Function 2's length scale decreased from 0.0521 to 0.0431, suggesting a relatively local response structure, while Functions 5 and 8 remained broadly stable at 0.363 and 1.02 respectively. Overall, the additional observations have not caused major instability in the GP models, so it is reasonable to retain them for the Week 7 acquisition-function analysis while accounting for the continuing reliability issue with Function 1.
+
+**Step 2B. Prediction and uncertainty diagnostics**
+
+To further assess the behaviour of each refitted GP, 100,000 candidate points were generated across the permitted search space. The GP was used to calculate the predicted mean and uncertainty for each candidate, allowing the range of predictions and uncertainty to be examined across each function. The same candidate sets will also be retained for the subsequent hyperparameter analysis, ensuring that differences between acquisition recommendations result from changes to the acquisition settings rather than different randomly generated candidate points.
+
+Key diagnostic results:  
+F1: predicted range = 0.000595, max uncertainty = 0.001626  
+F2: predicted max = 0.7905, max uncertainty = 0.2550  
+F3: predicted max = −0.0118, max uncertainty = 0.0782  
+F4: predicted max = −0.2003, max uncertainty = 7.4108  
+F5: predicted max = 7121.16, max uncertainty = 2074.52  
+F6: predicted max = −0.3656, max uncertainty = 0.5196  
+F7: predicted max = 2.9294, max uncertainty = 0.7721  
+F8: predicted max = 9.9641, max uncertainty = 0.6576  
+
+The diagnostics show meaningful variation in predicted outputs and uncertainty for Functions 2–8, providing a useful basis for acquisition-function tuning. Functions 3–7 have predicted maxima close to their strongest observed values, suggesting the GPs are identifying the recently successful regions. Function 1 remains the main exception, with predictions effectively around zero and uncertainty dominating the predicted mean variation, reinforcing the continued limitations of its RBF GP. Overall, the results support moving to Step 3 to test how different UCB κ and EI ξ values affect candidate selection.
+
+**Step 3. Tune the acquisition-function hyperparameters**
+
+UCB was evaluated using κ values of 0.5, 1.0, 1.5 and 2.5. Lower κ values place greater emphasis on exploitation, while higher values give greater weight to uncertainty and therefore exploration. The same 100,000 candidate points were used for every setting so that changes in the selected candidate could be attributed directly to κ rather than random candidate generation.
+
+F1	No change	Same candidate at all four κ values  
+F2	Gradual	Distance from best increased 0.021 → 0.048  
+F3	Gradual	Distance increased 0.289 → 0.474  
+F4	Threshold	Same candidate at 0.5–1.5; major exploration at 2.5  
+F5	Threshold	Known best at 0.5–1.5; exploratory candidate at 2.5  
+F6	Strong gradual	Distance increased 0.163 → 0.677  
+F7	Threshold	Known best at 0.5; increasingly exploratory thereafter  
+F8	Gradual	Distance increased 0.345 → 0.761  
+
+The results show that κ had a meaningful effect on candidate selection for most functions. Functions 2, 3, 6 and 8 became progressively more exploratory as κ increased, while Functions 4, 5 and 7 showed more sudden changes once greater weight was placed on uncertainty. Function 1 remained unchanged across all settings, although its continuing GP reliability issues mean this stability should be treated cautiously. Overall, the results suggest that a single fixed κ is not necessarily appropriate across all eight functions and support considering the exploration level on a function-specific basis.
+
+**Step 3B. EI hyperparameter tuning**
+
+Expected Improvement was evaluated using ξ values equivalent to 0%, 1%, 5% and 10% of the observed output standard deviation for each function. Scaling ξ to each function's output variation allows the same relative settings to be compared despite the substantial differences in output magnitude between functions. As ξ increases, a greater improvement over the current best is required, changing the balance between exploiting known strong regions and considering less certain candidates.
+
+F1	No change	Same candidate at all ξ values  
+F2	Very stable	Only small movement as ξ increased  
+F3	Gradual	Distance from best increased 0.347 → 0.389  
+F4	Strong threshold	Local candidate at 0%; highly exploratory from 1% onwards  
+F5	No change	Same candidate at every ξ  
+F6	Threshold	Same at 0–1%; more exploratory at 5–10%  
+F7	No change	Same candidate at every ξ  
+F8	Strong gradual	Distance from best increased 0.345 → 0.761  
+
+The results show that EI sensitivity to ξ varies considerably between functions. Functions 1, 5 and 7 selected the same candidate across all settings, while Function 2 was also relatively stable. Functions 3 and 8 became progressively more exploratory as ξ increased, while Functions 4 and 6 showed clearer threshold effects. Function 4 was particularly sensitive, moving from a candidate only 0.0775 from the current best at ξ = 0% to one 0.9250 away at ξ = 1%. Overall, this again supports selecting acquisition settings on a function-specific basis rather than applying a single fixed value across all eight functions.
+
+**Step 4. Refit and validate the Neural Network**
+
+The neural-network surrogate was retrained using the expanded Week 7 datasets and the same configuration used previously. Its predictive reliability was reassessed using Leave-One-Out Cross-Validation (LOOCV), comparing its Mean Absolute Error (MAE) against a simple mean-prediction baseline. Keeping the NN configuration unchanged allows changes in validation performance to be attributed primarily to the additional observations rather than changes to the model itself. The NN will only be treated as strong evidence for functions where it outperforms the baseline.
+
+F1: Mean training loss = 0.000924  
+F2: Mean training loss =	0.006460  
+F3: Mean training loss =	0.000429  
+F4: Mean training loss =	0.000198  
+F5: Mean training loss =	0.000276  
+F6: Mean training loss =	0.000301  
+F7: Mean training loss =	0.000427  
+F8: Mean training loss =	0.000392  
+
+The retrained NN ensembles achieved low training losses across all eight functions. Functions 3–8 showed particularly small and consistent losses across the five random initialisations, while Function 2 showed the greatest variation between models. Overall, the networks fit the observed data closely, but low training error alone does not demonstrate that they generalise successfully to unseen observations. LOOCV is therefore used as the more important test of predictive reliability before deciding how much weight to give the NN recommendations this week.
+
+**Step 4B. LOOCV validation**
+
+LOOCV was used to test whether the neural network could generalise beyond the observations used for training. Each observation was removed in turn, the model was retrained on the remaining data, and its prediction for the held-out observation was recorded. The resulting MAE was compared with a simple mean-prediction baseline. This provides a more meaningful measure of NN reliability than training loss alone.
+
+Function 1:  
+NN LOOCV MAE:       0.001776  
+Mean baseline MAE:  0.001111  
+NN beats baseline:  False  
+
+Function 2:  
+NN LOOCV MAE:       0.218453  
+Mean baseline MAE:  0.237181  
+NN beats baseline:  True  
+
+Function 3:  
+NN LOOCV MAE:       0.063001  
+Mean baseline MAE:  0.050129  
+NN beats baseline:  False  
+
+Function 4:  
+NN LOOCV MAE:       1.906639  
+Mean baseline MAE:  7.081622  
+NN beats baseline:  True  
+
+Function 5:  
+NN LOOCV MAE:       228.443505  
+Mean baseline MAE:  1689.428734  
+NN beats baseline:  True  
+
+Function 6:  
+NN LOOCV MAE:       0.235898  
+Mean baseline MAE:  0.497547  
+NN beats baseline:  True  
+
+Function 7:  
+NN LOOCV MAE:       0.376668  
+Mean baseline MAE:  0.586378  
+NN beats baseline:  True  
+
+Function 8:  
+NN LOOCV MAE:       0.358344  
+Mean baseline MAE:  0.941538  
+NN beats baseline:  True  
+
+The LOOCV results provide stronger evidence for the NN than the training losses alone. The NN outperformed the mean baseline for six of the eight functions, with Functions 4, 5, 6 and 8 showing particularly clear improvements over the baseline. Function 2 also passed the validation test for the first time, with its MAE falling from 0.2674 last week to 0.2185, suggesting that the additional observation has improved its predictive performance. Functions 1 and 3 continue to fail the baseline test, so NN recommendations for these functions will be given limited weight. Overall, the NN remains useful as a secondary surrogate, but its reliability continues to vary by function.
+
+**Step 5. Generate and compare NN candidates**
+
+The validated NN ensembles were used to generate an alternative candidate for each function. Candidate selection was based primarily on the mean prediction across the five models, while disagreement between ensemble members was retained as an indication of how consistently the networks supported the prediction. Distances from the current best and nearest existing observation were also calculated. These candidates provide an independent comparison with the GP recommendations, with greater weight given to the NN for functions where it successfully passed LOOCV validation.
+
+Function 1:  
+NN selected point: [0.703066 0.997962]  
+NN predicted output:             0.000741  
+NN model disagreement:          0.000834  
+Distance from current best:     0.2664  
+Distance from nearest existing: 0.1383  
+
+Function 2:  
+NN selected point: [0.708221 0.158532]  
+NN predicted output:             0.706124  
+NN model disagreement:          0.082928  
+Distance from current best:     0.0210  
+Distance from nearest existing: 0.0210  
+
+Function 3:  
+NN selected point: [0.320487 0.370858 0.441843]  
+NN predicted output:             -0.014537  
+NN model disagreement:          0.003243  
+Distance from current best:     0.0725  
+Distance from nearest existing: 0.0725  
+
+Function 4:  
+NN selected point: [0.384332 0.391111 0.336887 0.416488]  
+NN predicted output:             -0.001964  
+NN model disagreement:          0.398781  
+Distance from current best:     0.0775  
+Distance from nearest existing: 0.0665  
+
+Function 5:  
+NN selected point: [0.939869 0.992261 0.978815 0.999723]  
+NN predicted output:             7103.413178  
+NN model disagreement:          20.900199  
+Distance from current best:     0.0000  
+Distance from nearest existing: 0.0000  
+
+Function 6:  
+NN selected point: [0.434907 0.336577 0.469677 0.823758 0.051909]  
+NN predicted output:             -0.347172  
+NN model disagreement:          0.039748  
+Distance from current best:     0.1737  
+Distance from nearest existing: 0.1737  
+
+Function 7:  
+NN selected point: [0.071621 0.326216 0.438868 0.235047 0.379751 0.461629]  
+NN predicted output:             2.977398  
+NN model disagreement:          0.203612  
+Distance from current best:     0.1979  
+Distance from nearest existing: 0.1979  
+
+Function 8:  
+NN selected point: [0.01176  0.170084 0.028845 0.085061 0.639117 0.555954 0.195113 0.511384]  
+NN predicted output:             10.264397  
+NN model disagreement:          0.164985  
+Distance from current best:     0.3583  
+Distance from nearest existing: 0.3583  
+
+The NN candidates showed varying levels of agreement with the GP analysis. Function 2 is particularly encouraging: after passing LOOCV for the first time, the NN selected a candidate only 0.0210 from the current best, closely matching the low-κ UCB region. Function 4 also showed strong agreement, with the NN selecting exactly the same candidate identified by UCB at κ = 0.5–1.5 and EI at ξ = 0%. Functions 6 and 7 produced plausible NN candidates close to their current high-performing regions, with predicted outputs of −0.3472 and 2.9774 respectively, both better than their current best values.
+
+Function 5's NN returned directly to the existing best observation and therefore cannot be submitted, although this reinforces the model's preference for the successful region identified last week. Function 8 again produced an optimistic prediction of 10.2644, above the current best of 9.9112, but its recent optimisation performance means this should still be treated cautiously. Functions 1 and 3 failed LOOCV, so their NN candidates will receive limited weight despite their predicted outputs.
+
+**Step 5B. Quantitative GP–NN candidate comparison**
+
+The distance between each NN candidate and every candidate generated during the UCB κ and EI ξ tuning was calculated. Smaller distances indicate that the two surrogate approaches are independently identifying similar regions of the search space, while larger distances indicate greater disagreement. This provides a quantitative measure of model agreement to supplement the comparison of predicted outputs and validation performance.
+
+F1: Closest NN–GP distance =	0.3384 =	Clear disagreement  
+F2: Closest NN–GP distance =	0.0022 =	Very strong agreement  
+F3: Closest NN–GP distance =	0.2358 =	Limited agreement  
+F4: Closest NN–GP distance =	0.0000 =	Exact agreement at several settings  
+F5: Closest NN–GP distance =	0.0000 =	Agreement with low-κ UCB, but duplicate  
+F6: Closest NN–GP distance =	0.1857 =	Moderate agreement at low κ  
+F7: Closest NN–GP distance =	0.1785 =	Moderate agreement  
+F8: Closest NN–GP distance =	0.2994 =	Some agreement with exploitative settings  
+
+The comparison provides particularly strong evidence of model agreement for Functions 2 and 4. For Function 2, the NN candidate was only 0.0022 from the κ = 0.5 UCB and ξ = 0% EI candidates, suggesting that the GP and NN are independently identifying essentially the same local region. Function 4 showed even stronger agreement, with the NN exactly matching the UCB candidate at κ = 0.5–1.5 and the EI candidate at ξ = 0%. Function 5 also exactly matched the lower-κ UCB recommendations, although this point is already an existing observation and therefore cannot be resubmitted.
+
+Agreement was weaker for Functions 6 and 7, although the NN remained closest to the less exploratory GP recommendations. Function 8 showed some agreement with the most exploitative settings but diverged substantially as greater exploration was introduced. Functions 1 and 3 showed relatively weak agreement, which further reduces the weight given to their NN recommendations given that both also failed LOOCV validation.
+
+**Step 6. Neighbourhood analysis**
+
+The three nearest existing observations to each representative GP and NN candidate were examined to assess whether model recommendations were supported by actual observed performance in the surrounding region. For UCB, κ values of 0.5, 1.5 and 2.5 were selected to represent relatively exploitative, intermediate and exploratory settings. For EI, ξ values of 0%, 5% and 10% of the observed output standard deviation were used for the same reason. The NN candidate was also included as an independent comparison. Using these representative settings allowed the neighbourhoods of locally focused and more exploratory recommendations to be compared without repeating every candidate generated during hyperparameter tuning.
+
+F1:	Both GP and NN candidates are near observations approximately equal to zero, providing little evidence of a clearly superior region.
+F2:	Strong local support: GP and NN candidates are very close to the current best of 0.746962 and other relatively strong observations.
+F3:	NN is closest to the strongest observations, but its failed LOOCV limits confidence in this evidence.
+F4:	Local GP/NN candidate is surrounded by relatively strong observations; highly exploratory GP candidate is instead near very poor outputs.
+F5:	Clear high-performing region around the current best, although the NN and low-κ UCB candidate duplicate the existing best.
+F6:	NN and low-κ UCB remain relatively close to the three strongest observations; exploratory GP candidates move much further away.
+F7:	NN and moderate GP candidates remain close to the new best and several other strong observations.
+F8:	NN and low-exploration GP candidates remain closer to the strongest observed outputs than the more exploratory alternatives.
+
+The neighbourhood analysis generally favours the more locally focused recommendations this week. Functions 2 and 4 have particularly strong support, combining good observed neighbourhoods with agreement between the GP and NN. Functions 6 and 7 also show evidence that further refinement around recently successful regions may be preferable to substantially increasing exploration. For Function 8, both the NN and low-exploration GP candidate remain reasonably close to the strongest observed outputs, whereas the more exploratory alternatives move considerably further from observed evidence. Function 5 clearly contains a productive local region, but a new nearby candidate will be required because several methods return the existing best point. Function 1 remains difficult to distinguish, while the favourable local evidence for the Function 3 NN candidate should be treated cautiously because that model failed LOOCV validation.
+
+**Step 7. Final candidate selection**
+
+Final candidates were selected on a function-by-function basis using the combined evidence from the week's analysis. Decisions considered recent optimisation performance, GP predictions and uncertainty, UCB and EI hyperparameter sensitivity, NN LOOCV performance, agreement between the GP and NN, and the observed neighbourhood surrounding each candidate. Greater emphasis was placed on locally supported recommendations where recent queries had successfully improved the objective, while more exploratory candidates were considered where local evidence was weak. Candidates were not selected purely on the highest predicted output or acquisition score.
+
+Provisional selections:  
+F1:	GP UCB/EI	NN fails LOOCV - GP settings all agree  
+F2:	UCB κ=0.5 / EI ξ=0% region -	Very strong GP–NN agreement and strong neighbourhood  
+F3:	UCB κ=0.5	- NN fails LOOCV; lower exploration after another new best  
+F4:	UCB κ=0.5 / EI ξ=0% / NN agreement -	Exact cross-model agreement and strong local evidence  
+F5:	Generate local refinement -	Models identify existing best, which cannot be resubmitted  
+F6:	UCB κ=0.5 -	Recent EI success, but tuning/neighbourhood now favour lower exploration  
+F7:	UCB κ=1.5 / EI ξ=0% region -	Move away from duplicate best while retaining strong local support  
+F8:	UCB κ=0.5 / EI ξ=0% -	More conservative GP candidate has stronger neighbourhood support  
+
+Function 1 — GP UCB/EI agreement
+Selected: [0.858598, 0.697368]
+Function 1 remains the least reliable modelling problem. The GP length scale is still fixed at its lower bound of 1e-05 and the NN again failed LOOCV validation. However, all tested UCB and EI hyperparameter settings selected exactly the same GP candidate, whereas the NN disagreed substantially and lacks validation support. With no clearly superior observed region, the unanimous GP recommendation provides the most consistent available evidence.
+
+Function 2 — UCB κ=0.5 / EI ξ=0%
+Selected: [0.706079, 0.158030]
+Function 2 has unusually strong agreement this week. The NN passed LOOCV for the first time and selected a point only 0.0022 from the κ=0.5 UCB and ξ=0% EI candidate. The selected point is also only 0.0211 from the current best of 0.746962 and the GP predicts 0.784588. Given the strong cross-model agreement and local evidence, further refinement of this region is preferred to increasing exploration.
+
+Function 3 — UCB κ=0.5
+Selected: [0.450320, 0.561567, 0.490526]
+Function 3 achieved another small improvement last week, increasing the best from −0.016451 to −0.015498. The NN proposes a more locally focused point with a slightly better predicted output, but it continues to fail LOOCV and therefore receives limited weight. Among the GP recommendations, κ=0.5 provides the least exploratory option and predicts −0.018745, while higher κ values progressively move further from the successful region. This provides a controlled balance between refinement and modest exploration.
+
+Function 4 — GP/NN agreement
+Selected: [0.384332, 0.391111, 0.336887, 0.416488]
+This is one of the strongest selections this week. Function 4 produced a new best of −0.200431 last round, and the NN now exactly agrees with UCB at κ=0.5–1.5 and EI at ξ=0%. The candidate also lies within a relatively strong observed neighbourhood, whereas the more exploratory GP alternative moves into a region associated with substantially poorer outputs. The NN prediction of −0.001964 is optimistic and has relatively high model disagreement, but the exact agreement on candidate location provides stronger evidence than the prediction alone.
+
+Function 5 — GP/NN local refinement
+Selected: [1.000000, 1.000000, 1.000000, 1.000000]
+The standard NN and lower-κ UCB recommendations returned the existing best observation and therefore could not provide a new query. A dedicated local search was consequently performed around the current best. Both surrogate models strongly supported movement towards the upper boundary, with the selected point receiving a GP prediction of 7920.78 and an NN prediction of 8059.00. The point is only 0.0642 from the current best observation of 7121.15, allowing further exploitation of the highly successful region while still providing a novel query. As the candidate lies on the boundary, the predicted improvement should still be treated cautiously.
+
+Function 6 — UCB κ=0.5
+Selected: [0.387946, 0.435172, 0.345126, 0.743513, 0.076825]
+Expected Improvement successfully produced a new best last week, improving the output from −0.456874 to −0.379740. However, this week's hyperparameter analysis shows that increasing exploration rapidly moves the GP away from the strongest observed region. The κ=0.5 candidate remains relatively close to the new best and predicts −0.387785, while the validated NN also favours continued refinement rather than substantial exploration. The lower-κ candidate therefore provides a conservative continuation of the successful region.
+
+Function 7 — UCB κ=1.5 / EI agreement
+Selected: [0.054205, 0.216830, 0.421532, 0.346756, 0.385001, 0.543902]
+The previous GP-selected candidate produced a substantial new best of 2.929370. UCB at κ=0.5 simply returns this existing point and therefore cannot be resubmitted. UCB at κ=1.0–1.5 and the tested EI settings identify the same nearby novel candidate, with a predicted output of 2.620240 and moderate uncertainty. The NN also passes LOOCV and selects a point only 0.1785 away from this recommendation, providing additional support for the same general region.
+
+Function 8 — UCB κ=0.5 / EI ξ=0%
+Selected: [0.030327, 0.231267, 0.050266, 0.208295, 0.818520, 0.414744, 0.307096, 0.583908]
+The NN continues to pass LOOCV and predicts an improvement to 10.264397, but recent NN-selected queries have not improved the current best. The lower-exploration GP candidate predicts 9.945039 and remains substantially closer to the strongest observed neighbourhood than the more exploratory alternatives. UCB κ=0.5 and EI ξ=0% also agree on this candidate, providing a more conservative test of the promising region.
+
+**Step 8. Final validation and submission**
+
+The eight selected candidates were subjected to a final validation check before submission. Each point was checked for the correct dimensionality, whether all values fell within the permitted [0,1] bounds, whether it duplicated an existing observation, and its distance from the nearest existing point. The final candidates were then formatted to six decimal places for submission.
+
+All eight final candidates passed the validation checks. Each point had the correct dimensionality, all coordinates were within the permitted [0,1] bounds, and none duplicated an existing observation. Distances to the nearest existing observations ranged from 0.0211 for Function 2 to 0.3452 for Function 8, reflecting the different levels of local refinement and exploration selected on a function-by-function basis. Function 5's boundary candidate [1,1,1,1] was also confirmed to be valid and novel. The points were then formatted to six decimal places for submission.
+
+
+**Overall thoughts on Week 7**
+
+This week represented a further shift towards a more evidence-driven and function-specific optimisation strategy. Five of the eight submitted points from the previous round produced new best values, including particularly strong improvements for Functions 5 and 7. This suggests that the increasing use of model validation, acquisition-function comparison and local evidence is helping to identify productive regions of the search space.
+
+A major focus this week was testing how sensitive the GP recommendations were to different exploration settings. Comparing multiple UCB κ and EI ξ values showed that some functions were relatively stable, while others changed substantially as greater weight was placed on exploration. This reinforced the decision not to apply a single acquisition setting automatically across all functions. The NN also became more useful, passing LOOCV for six functions, including Function 2 for the first time. However, its recommendations were still treated cautiously where validation or recent optimisation performance was weaker.
+
+The final submissions therefore use different strategies depending on the evidence available. Functions 2 and 4 focus on regions where the GP and NN showed particularly strong agreement, while Functions 3, 6 and 8 use relatively conservative GP settings to refine promising areas without moving too far into uncertain regions. Function 7 continues to explore around the region that produced a substantial new best last week. Function 1 remains the most difficult to model reliably, so its selection is lower confidence despite agreement between the GP acquisition settings. Function 5 is the most distinctive submission: repeated improvements have moved the best observation close to the upper boundary, and both models supported further movement towards this boundary, resulting in [1,1,1,1] being selected as a local refinement.
+
+Overall, the submitted points reflect a greater emphasis on combining actual optimisation performance, model validation, acquisition sensitivity, cross-model agreement and observed neighbourhood evidence, rather than relying on any individual model or acquisition function. The next set of outputs should therefore be particularly useful for assessing whether this more selective approach continues to improve performance and whether the strong local trends identified for Functions 2, 4, 5 and 7 persist.
+
 
 
 
@@ -3052,3 +3452,4 @@ Week 3: Introduce SVM classification to identify high- and low-performing region
 Week 4: Investigate the exploration–exploitation trade-off by comparing different UCB κ values and Expected Improvement, leading to more function-specific query selection.
 Week 5: Introduce a simple neural-network surrogate as a secondary model and compare its recommendations with the established GP-based approach.
 Week 6: Use accumulated results to assess which methods are actually working for each function and make candidate selection more evidence-driven.
+Week 7: Systematically tune UCB and EI hyperparameters, assess candidate stability, and combine GP–NN agreement, validation and neighbourhood evidence to refine function-specific selections.
