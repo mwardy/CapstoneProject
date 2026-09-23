@@ -3,9 +3,9 @@
 
 **Overall Objective**
 
-The capstone project involves using Bayesian Optimisation to find the maximum values of eight unknown functions. It begins with 10 known data points for each function, which are used to build an initial model and select the first new query point. The functions have different numbers of input dimensions, meaning that some have relatively simple search spaces while others have many more possible combinations of inputs to explore. As the number of dimensions increases, the search space becomes more complex, making it more difficult to identify promising areas from the limited observations available. This means that the balance between exploring uncertain areas and exploiting areas that already appear promising may differ between functions. Each week, one additional data point is received for each function based on the queries submitted, allowing the models to be updated with more information. As the project progresses, the aim is to use this growing dataset to improve the models and make increasingly informed decisions about where to query next. Overall, the project demonstrates how an iterative optimisation approach can gradually improve its understanding of unknown problems of varying complexity and move towards better solutions.
+The capstone project involves using Bayesian Optimisation to find the maximum values of eight unknown functions. It begins with an initial set of known observations for each function, which are used to build an initial model and select the first new query point. The functions have different numbers of input dimensions, meaning that some have relatively simple search spaces while others have many more possible combinations of inputs to explore. As the number of dimensions increases, the search space becomes more complex, making it more difficult to identify promising areas from the limited observations available. This means that the balance between exploring uncertain areas and exploiting areas that already appear promising may differ between functions. Each week, one additional data point is received for each function based on the queries submitted, allowing the models to be updated with more information. As the project progresses, the aim is to use this growing dataset to improve the models and make increasingly informed decisions about where to query next. Overall, the project demonstrates how an iterative optimisation approach can gradually build a better representation of unknown functions of varying complexity and move towards better solutions.
 
-**Hypothetic Methodology**
+**Proposed Methodology**
 
 - Examine the initial data — Check the inputs and outputs for each function, including the number of dimensions, highest and lowest observed outputs, and output range.
 - Fit a Gaussian Process — Train an RBF Gaussian Process for each function using the existing input-output observations.
@@ -3449,17 +3449,17 @@ Add the eight new observations and compare each output with the previous best. R
 Step 2 – Refit and diagnose the models   
 Refit the GP models and retrain the neural-network surrogates using the expanded datasets. Review GP length scales and uncertainty, and repeat NN validation to assess model reliability.  
 
-Step 3 – Review historical method performance  
-Compare how UCB, EI, NN and exploratory strategies have performed across previous rounds. Use both the frequency and size of improvements to identify which methods have worked best for each function.  
+Step 3 – Generate and compare GP candidates
+Generate tuned UCB and EI candidates using the settings explored previously. Compare predicted performance, uncertainty, acquisition behaviour and candidate novelty.
 
-Step 4 – Generate and compare candidates  
-Generate tuned UCB and EI candidates using the settings explored in Week 7, alongside updated NN recommendations. Compare predicted performance, uncertainty, candidate stability and GP–NN agreement.  
+Step 4 – Generate and compare NN candidates
+Generate updated NN recommendations and interpret them according to LOOCV validation. Compare their predicted performance, disagreement and novelty with the GP recommendations.
 
-Step 5 – Check neighbourhood evidence  
-Examine the nearest existing observations around the strongest candidates to determine whether they are supported by previously successful regions or represent more exploratory choices.  
+Step 5 – Compare GP and NN candidates
+Quantify the distance between GP and NN recommendations to identify areas of cross-model agreement and disagreement, while accounting for the reliability of each surrogate.
 
-Step 6 – Assess function-specific strategy  
-Use recent results, historical method performance, model reliability and neighbourhood evidence to decide the appropriate exploration–exploitation balance for each function.  
+Step 6 – Neighbourhood and function-specific analysis
+Examine nearby observed outputs around the strongest candidates and combine this with recent optimisation performance, model reliability and GP–NN agreement to determine the appropriate exploration–exploitation strategy for each function. 
 
 Step 7 – Select final candidates  
 Choose one point per function using the combined evidence, recording the method selected and the reasoning behind each choice.  
@@ -3774,7 +3774,7 @@ NN nearest outputs: 9.930811, 9.911249, 9.821986
 Both have strong neighbourhood evidence, although the UCB candidate is closer to existing observations.  
 
 The neighbourhood analysis provides strong support for a locally focused strategy across most functions this week. Functions 4 and 5 provide the clearest evidence: both achieved substantial improvements in the previous round, and their local candidates remain surrounded by the strongest observed outputs, whereas the exploratory EI regions are associated with much poorer historical performance.  
-Function 2 is particularly informative because the neighbourhood evidence helps resolve some of the GP–NN disagreement. The validated NN candidate lies in a region containing several strong observations, while the novel exploratory GP candidate is surrounded by much weaker results. Given the GP's lower-bound length scale, this provides additional support for giving the NN region greater consideration.  
+The NN candidate for Function 2 lies in a region containing several relatively strong observations, including 0.611205, 0.366010 and 0.507418. In contrast, the exploratory GP candidate is surrounded by substantially weaker observed outputs. Given that the GP length scale has collapsed to its lower bound while the NN continues to outperform its LOOCV baseline, the NN region currently has stronger supporting evidence. However, the NN prediction of 0.696942 remains below the current best of 0.746962, so the selection should be interpreted as refinement of the best-supported region rather than evidence of a likely improvement over the existing optimum.
 Functions 3 and 6 similarly favour continued refinement around their established high-performing regions. Function 7 also has a clearly strong neighbourhood, although a novel candidate is required because the NN and low-κ UCB return the existing best. For Function 8, both the NN and low-κ UCB remain associated with strong observations, but the lower-κ GP candidate has stronger local support and remains closer to the observed data.  
 Function 1 remains unresolved, as neither candidate region has meaningful neighbourhood evidence capable of distinguishing between them.  
 Overall, the neighbourhood results reinforce the evidence from the preceding steps and give us a much stronger basis for function-specific final candidate selection rather than choosing candidates solely from model predictions or acquisition scores.  
@@ -3924,4 +3924,4 @@ Week 4: Investigate the exploration–exploitation trade-off by comparing differ
 Week 5: Introduce a simple neural-network surrogate as a secondary model and compare its recommendations with the established GP-based approach.  
 Week 6: Use accumulated results to assess which methods are actually working for each function and make candidate selection more evidence-driven.  
 Week 7: Systematically tune UCB and EI hyperparameters, assess candidate stability, and combine GP–NN agreement, validation and neighbourhood evidence to refine function-specific selections.  
-Week 8: Structured LLM-assisted reasoning and prompt-sensitivity testing  
+Week 8: Combine GP and NN evidence, neighbourhood analysis and function-specific model diagnostics to make final candidate selections, with additional model-independent exploration where surrogate reliability remains weak. 
