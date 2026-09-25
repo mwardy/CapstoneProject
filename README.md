@@ -4050,7 +4050,7 @@ Function 8: 48 observations | RBF length scale = 1.050 | Log marginal likelihood
 
 The updated GP diagnostics continue to show a clear difference between Functions 1–2 and the remaining functions. Despite receiving an additional observation, Functions 1 and 2 both retain length scales at the lower bound of 1e-05. This indicates that simply scaling these datasets from 17 to 18 observations has not resolved the GP's difficulty in identifying a smooth relationship between nearby observations. GP predictions for these functions should therefore continue to be treated cautiously.  
 Functions 3–8 fitted substantially larger length scales, ranging from 0.201 for Function 3 to 1.050 for Function 8. Function 4 is particularly interesting following its recent optimisation performance: the GP retains a reasonable length scale while the objective has continued to improve substantially, supporting continued investigation of the newly identified high-performing region. Functions 5, 6 and 7 similarly retain plausible length scales for further GP-based candidate analysis.  
-Function 8 now has the largest fitted length scale at 1.050, indicating substantially smoother modelled behaviour across its input space than Functions 1 and 2. Combined with its sequence of increasingly small new bests, this may help explain why local improvements are becoming more incremental.  
+Function 8 now has the largest fitted length scale at 1.050, indicating substantially smoother modelled behaviour across its input space than Functions 1 and 2. This is consistent with the relatively stable high-performing region identified as recent improvements have become more incremental. 
 Overall, the additional observations have not produced an obvious emergent change in GP behaviour. The previously problematic GPs for Functions 1 and 2 remain problematic, while the remaining models continue to provide usable surrogate representations. Any evidence that model reliability is changing as the datasets scale will therefore need to come from the subsequent validation and prediction analysis rather than the fitted GP length scales alone.  
 
 **NN validation**
@@ -4088,7 +4088,7 @@ Function 8: Candidate novelty increased substantially with κ. The κ = 0.5 cand
 
 The acquisition comparison shows a clearer exploration–exploitation structure than simply choosing a single GP recommendation. Functions 3, 4, 6 and 8 show a progressive movement away from observed regions as κ increases, demonstrating the expected effect of placing greater weight on uncertainty.  
 Functions 4 and 6 currently provide particularly interesting exploitation opportunities. For Function 4, the low-κ candidate has a predicted output of 0.736288 compared with the current best of 0.387262, while Function 6 has multiple relatively local candidates predicted above its current best. Given that both functions also established new bests in Week 8, these results provide further support for investigating continued refinement around their recently successful regions.  
-Function 8 presents a particularly useful example of the exploration–exploitation trade-off. The low-κ candidate predicts a small improvement over the existing optimum, while progressively higher κ values move substantially further from the observed data. Combined with the diminishing improvement sizes identified earlier, this suggests that we should later consider whether continued local refinement is worthwhile or whether some additional exploration is justified. We should not decide that yet.  
+Function 8 presents a particularly useful example of the exploration–exploitation trade-off. The low-κ candidate predicts a small improvement over the existing optimum, while progressively higher κ values move substantially further from the observed data. Combined with the diminishing improvement sizes identified earlier, this suggests that the later candidate-selection stage should consider whether continued local refinement remains worthwhile or whether some additional exploration is justified. We should not decide that yet.  
 Function 5 again shows a sharp divide between local exploitation and model-driven exploration. The exploratory candidate selected by κ = 2.5 and EI has very high uncertainty but a predicted output far below the current best. Given the strong historical performance of the upper-boundary region, this candidate will require particularly strong supporting evidence from the NN and neighbourhood analysis before it would justify moving away from that region.  
 Functions 1 and 2 remain difficult to interpret because their GP length scales are still at the lower bound. Agreement between acquisition settings for Function 1 therefore should not be interpreted as genuine model confidence. Function 2 similarly shows acquisition behaviour dominated by the contrast between an existing observation and a high-uncertainty exploratory region, reinforcing the need to use its validated NN as an independent comparison.  
 Overall, there is no need to select candidates yet. The acquisition analysis has identified where the GP favours exploitation, exploration or a compromise between the two. The next step should be to generate the updated NN candidates, after which we can examine cross-model agreement and determine whether the additional data has strengthened or weakened the evidence for particular regions.  
@@ -4160,7 +4160,7 @@ Function 7 remains concentrated around a clearly strong region, but the low-κ G
 Function 8 is particularly informative in the context of diminishing returns. Although recent improvements have become smaller, both surrogate approaches continue to identify candidates associated with the strongest observed neighbourhood. The NN additionally predicts a value above the current best with low ensemble disagreement. This suggests that diminishing returns do not necessarily imply that the region has been exhausted; further local refinement remains justified, although expected gains may be relatively small.  
 Function 3 also strongly favours local refinement based on neighbourhood evidence, despite the NN failing LOOCV. Its latest observation produced a substantial new best and the low-κ GP independently remains near the same high-performing region, so the GP and observed data provide sufficient evidence without relying heavily on the NN.  
 Function 1 remains unresolved. Both candidate regions are surrounded by values effectively equal to zero, while neither surrogate is reliable enough to distinguish between them. It therefore remains the strongest candidate for a model-independent exploration strategy, rather than repeatedly following unreliable surrogate predictions.  
-Overall, Step 6 gives us a fairly clear direction: F2–F8 mostly favour exploitation or controlled local refinement, while F1 remains the main case for broader exploration. Importantly, that's based on the combination of recent optimisation performance, validation, cross-model agreement and actual observed neighbourhoods rather than simply selecting whichever model predicts the highest value.  
+Overall, Step 6 provides a fairly clear direction: Functions 2–8 mostly favour exploitation or controlled local refinement, while Function 1 remains the main case for broader exploration. Importantly, that's based on the combination of recent optimisation performance, validation, cross-model agreement and actual observed neighbourhoods rather than simply selecting whichever model predicts the highest value.  
 
 **Step 7. Function-specific candidate selection**
 
@@ -4207,18 +4207,100 @@ Function 6 differs because increasing the radius produces progressively stronger
 For Function 7, all three searches remain promising. The increasingly optimistic NN prediction at the larger radius needs to be balanced against increasing disagreement and a slightly weaker GP prediction. A more conservative local candidate may therefore provide a better balance between novelty and cross-model support.  
 Function 8 provides particularly interesting evidence. Despite the diminishing returns identified earlier, both models continue to predict improvement across the local search. The 0.10 candidate is predicted above the current best by both models and provides considerably greater novelty than the smaller-radius alternatives. This supports broadening the local refinement slightly rather than repeatedly making extremely small adjustments around the current best.  
 
+**Function 5 novelty-constrained refinement**
+
+The initial local-refinement search for Function 5 repeatedly converged extremely close to the existing optimum at [1,1,1,1], producing candidates with nearest-observation distances of only approximately 0.0001. Although technically novel, these points represent negligible movement within the search space and are unlikely to provide meaningful additional information.  
+Function 5 was therefore examined separately using minimum novelty distances of 0.03, 0.05 and 0.10 from all existing observations. This allows the strength of the established upper-boundary region to be retained while testing whether meaningful movement away from the current optimum remains supported by the GP and validated NN.  
+
+Minimum novelty 0.03: Candidate = [1.000000, 0.969998, 1.000000, 1.000000] | GP predicted = 8287.623017 | NN predicted = 8688.604318 | GP uncertainty = 247.689521 | NN disagreement = 118.482518 | Nearest distance = 0.030002.  
+
+Minimum novelty 0.05: Candidate = [1.000000, 0.949994, 1.000000, 1.000000] | GP predicted = 8001.755491 | NN predicted = 8710.650195 | GP uncertainty = 410.333828 | NN disagreement = 197.196894 | Nearest distance = 0.050006.  
+
+Minimum novelty 0.10: Candidate = [1.000000, 0.899981, 1.000000, 1.000000] | GP predicted = 7187.506528 | NN predicted = 8743.779604 | GP uncertainty = 802.299569 | NN disagreement = 369.571101 | Nearest distance = 0.100019.  
+ 
+The novelty-constrained analysis confirms that Function 5 remains strongly concentrated around the [1,1,1,1] boundary optimum, but also reveals increasing disagreement between the surrogate models as candidates are forced further away. At a minimum novelty of 0.03, the GP still predicts a relatively strong output of 8287.62, while the NN predicts a small improvement over the current best of 8662.48. Both GP uncertainty and NN disagreement remain substantially lower than at the larger novelty thresholds.  
+As the minimum distance increases to 0.05 and 0.10, the NN becomes progressively more optimistic, but the GP prediction deteriorates and uncertainty increases sharply. NN disagreement also rises from 118.48 at 0.03 to 369.57 at 0.10. The increasing NN prediction should therefore not be interpreted as stronger evidence for improvement, because it occurs alongside increasing extrapolation and model disagreement.  
+Overall, the 0.03 region provides the strongest balance between meaningful novelty and model support. This is also consistent with the previous iteration, where a movement of approximately 0.03 from the optimum remained high-performing but did not improve on [1,1,1,1]. The candidate [1, 0.969998, 1, 1] therefore provides the strongest Function 5 option to carry forward into the final comparison.  
+
+**Function 1 model-independent exploration**
+
+Function 1 was treated separately because neither surrogate currently provides reliable predictive guidance. The GP length scale remains at its lower bound, the NN fails LOOCV validation, the models strongly disagree on their preferred regions and neighbourhood analysis does not distinguish between the alternatives. A model-independent space-filling strategy was therefore used to prioritise information gain rather than unreliable predicted performance. A large candidate set was generated across the two-dimensional search space and the candidate with the greatest distance from its nearest existing observation was selected.
+
+Function 1: The maximum-distance search selected [0.682178, 0.001903]. Its nearest existing observation is 0.306754 away, with the next two nearest observations at distances of 0.308314 and 0.316118.  
+
+The selected candidate occupies a substantially underexplored region of the Function 1 search space. Unlike the GP and NN recommendations, its selection does not depend on either surrogate producing reliable predictions and instead maximises distance from the existing observations.  
+A nearest-observation distance of 0.306754 provides meaningful novelty compared with the model-generated alternatives examined earlier. Given the GP's persistent lower-bound length scale, failed NN validation, strong GP–NN disagreement and lack of useful neighbourhood differentiation, this provides a more defensible strategy for Function 1 at this stage. The purpose of the query is therefore primarily exploration and information gain, rather than an expectation of immediate improvement.  
+
+**Function 2 NN-supported refinement**
+
+Function 2 was also treated separately because its GP length scale remains at the lower bound, making GP-based acquisition recommendations unreliable. Unlike Function 1, however, the NN continues to outperform its LOOCV baseline and its preferred region has strong neighbourhood support, including the current best observation. NN-only local searches were therefore performed around the current best at radii of 0.03, 0.05 and 0.10. Predicted output, ensemble disagreement and candidate novelty were compared to determine whether controlled refinement provided a better-supported alternative to the unconstrained NN recommendation.  
+
+Radius 0.03: Candidate = [0.711375, 0.108192] | NN predicted = 0.718309 | NN disagreement = 0.149730 | Distance from best = 0.030012 | Nearest existing observation = 0.018533.  
+
+Radius 0.05: Candidate = [0.710141, 0.088175] | NN predicted = 0.743700 | NN disagreement = 0.211086 | Distance from best = 0.050067 | Nearest existing observation = 0.030706.  
+
+Radius 0.10: Candidate = [0.704305, 0.038527] | NN predicted = 0.810157 | NN disagreement = 0.363055 | Distance from best = 0.100015 | Nearest existing observation = 0.077676.  
+
+The Function 2 refinement shows a clear relationship between increasing distance from the current best and increasing predicted performance, but this is accompanied by increasing NN disagreement. The 0.03 candidate has the lowest disagreement but is predicted below the current best of 0.746962 and remains very close to existing observations.  
+At radius 0.05, the prediction rises to 0.743700, approximately matching the current best, while disagreement increases moderately. At radius 0.10, the NN predicts 0.810157, exceeding the current best, and the candidate provides substantially greater novelty. However, disagreement also increases considerably to 0.363055.  
+The larger-radius candidate therefore offers greater potential improvement and information gain, but with less reliable model agreement. This is consistent with the earlier unconstrained NN recommendation, which moved further in the same general direction towards lower values of the second input and predicted an even higher output, but with still greater disagreement. Overall, the analysis suggests that the promising region may extend away from the current best towards lower values of the second dimension, but confidence decreases as the search moves further into this less-observed area.  
+
+**Final candidate selection**
+
+One final candidate was selected for each function using the combined evidence from the preceding analyses. Selection prioritised observed optimisation performance and model reliability, followed by neighbourhood support, cross-model agreement, predicted performance and candidate novelty. Where model reliability differed between functions, the weighting of this evidence was adjusted accordingly rather than applying a single selection rule across all eight functions.  
+For functions showing continued improvement and consistent local support, candidates were selected through controlled refinement around established high-performing regions. Where model reliability was poor, alternative strategies were used: model-independent exploration for Function 1 and NN-supported refinement for Function 2. The selections also considered evidence of diminishing returns, avoiding unnecessary exploration where an established region continued to produce improvements while allowing greater novelty where broader local searches remained well supported.  
+
+Provisional selections
+
+Function 1 – Model-independent exploration  
+Candidate: [0.682178, 0.001903]  
+- Neither surrogate provides reliable guidance, so the maximum-distance candidate is preferred. Its nearest-observation distance of 0.306754 gives substantial information gain without relying on unreliable model predictions.  
+
+Function 2 – NN refinement, radius 0.10  
+Candidate: [0.704305, 0.038527]  
+- The 0.10 candidate is preferred over 0.05. It follows the same direction as the unconstrained NN optimum, predicts 0.810157 compared with the current best of 0.746962, and provides considerably greater novelty. NN disagreement increases to 0.363055, so the prediction itself should be treated cautiously, but the directional evidence from the NN and neighbourhood analysis supports testing further towards lower values of the second dimension.
+
+Function 3 – radius 0.03  
+Candidate: [0.473523, 0.500295, 0.456235]  
+- The 0.03 candidate is preferred because it has the highest GP prediction (−0.000166), while the NN is not sufficiently validated to justify selecting between candidates based on its small prediction differences.
+
+Function 4 – radius 0.05  
+Candidate: [0.388825, 0.366595, 0.350533, 0.420635]  
+- This produces the highest GP prediction of 0.563957, substantially above the current best of 0.387262. All three radii converge tightly on the same region, so this remains a controlled local refinement rather than a materially more exploratory choice.  
+
+Function 5 – novelty 0.03  
+Candidate: [1.000000, 0.969998, 1.000000, 1.000000]  
+- This provides meaningful novelty while remaining closest to the established boundary optimum. Moving further away causes GP predictions to deteriorate sharply and uncertainty/disagreement to increase. The 0.03 candidate therefore provides the strongest balance between novelty and model support.  
+
+Function 6 – radius 0.10  
+Candidate: [0.440497, 0.372759, 0.525613, 0.791828, 0.000000]  
+- Both models become more optimistic as the search radius expands. At 0.10, the GP predicts −0.195871 and the NN −0.229762, both above the current best of −0.274388. The candidate also provides meaningful novelty at 0.110780, making this a justified broader local move.  
+
+Function 7 – radius 0.03  
+Candidate: [0.199451, 0.330731, 0.460263, 0.255214, 0.346569, 0.603374]  
+- A more conservative selection is appropriate for Function 7. The 0.10 candidate's higher NN prediction comes with increasing disagreement and a weaker GP prediction. The 0.03 candidate has the strongest GP support, the lowest NN disagreement and still has an NN prediction of 2.985400, above the current best of 2.929370.
+
+Function 8 – radius 0.10  
+Candidate: [0.031565, 0.175185, 0.160043, 0.130670, 0.742356, 0.487463, 0.194164, 0.622246]  
+- Despite recent diminishing gains, this function established another new best last week. The broader local candidate is particularly attractive because both models predict improvement: GP = 9.976275 and NN = 10.009696 versus the current best of 9.957032. It also increases novelty to 0.190714 without moving into the poorly supported exploratory GP region.  
 
 
+The final selections reflect increasingly function-specific optimisation strategies rather than applying a common acquisition rule across all eight functions. Function 1 remains focused on exploration because the available models provide little reliable predictive guidance, while Function 2 relies more heavily on the validated NN and observed neighbourhood structure.  
+Functions 3, 4 and 7 favour relatively conservative refinement because strong regions have already been identified and the evidence does not justify moving substantially away from them. Function 5 similarly remains close to its boundary optimum, but with a deliberate novelty constraint to avoid submitting an effectively duplicate point.  
+Functions 6 and 8 justify somewhat broader local refinement. Both recently established new bests and both GP and NN predictions continue to support improvement as the search moves further from the existing optimum. This is particularly relevant to the diminishing-returns analysis: smaller recent gains do not by themselves justify abandoning a region while new bests and model support continue to emerge.  
 
+**Step 8. Final validation and submission**
 
+The eight selected candidates were rounded to six decimal places and checked against the complete updated datasets before submission. Each candidate was tested for the correct dimensionality, compliance with the permitted [0,1] search space and duplication of an existing observation. The distance to the nearest existing observation was also calculated after rounding to confirm that each submitted candidate retained the intended level of novelty.  
+This final check is particularly important for Function 5, where a deliberate minimum novelty constraint was introduced, and for Functions 1, 2, 6 and 8, where candidate novelty formed part of the selection rationale.  
 
+All eight final candidates passed the validation checks. Each candidate had the correct dimensionality, remained within the permitted [0,1] search space and was distinct from all existing observations.
 
+Nearest-observation distances ranged from 0.010539 for Function 3 to 0.306755 for Function 1, reflecting the different function-specific strategies used. Functions 3 and 4 remain particularly close to their latest best observations as part of the fine local-refinement strategy, while Function 5 retains the deliberately imposed novelty distance of approximately 0.03 from its boundary optimum. Function 7 similarly remains close to its established high-performing region.
 
+Functions 6 and 8 make broader local moves, with nearest-observation distances of 0.110780 and 0.190714 respectively, reflecting the evidence that broader local refinement remained promising. Function 2 provides an intermediate case, moving 0.077676 from the nearest observation in the NN-supported direction without relying on its unreliable GP. Function 1 is the most exploratory selection, with a distance of 0.306755, consistent with the model-independent space-filling strategy.
 
-
-
-
-
+Overall, the final validation confirms that the candidates preserve the intended balance between exploration and exploitation after formatting to six decimal places, while all eight satisfy the submission requirements.
 
 
 
