@@ -4302,6 +4302,127 @@ Functions 6 and 8 make broader local moves, with nearest-observation distances o
 
 Overall, the final validation confirms that the candidates preserve the intended balance between exploration and exploitation after formatting to six decimal places, while all eight satisfy the submission requirements.
 
+**Module 21 (Week 10)**
+
+**Methodology**
+
+This round will build directly on the previous analysis by using the newly received outputs to assess how well the different modelling approaches performed in practice. Last round, GP and neural-network predictions were used alongside LOOCV, neighbourhood analysis and multi-radius local refinement to select candidates. Now that the actual outputs from those candidates are available, their realised performance can be compared with the model predictions.  
+The main focus will therefore be on model reliability and function-specific refinement. Prediction errors will be used alongside the existing diagnostics to identify where the GP or NN provides useful guidance and where greater caution is required. The latest observations will then be added to each dataset and the models refitted before generating new candidates.  
+The approach will remain different across the eight functions. Functions where recent local refinement has produced new bests can continue to exploit those regions, while functions where predicted improvements failed to materialise may require tighter refinement or reduced reliance on the model responsible. Function 1 will continue to require a more exploratory approach because the surrogate models have not yet provided reliable guidance.  
+The aim is not simply to select whichever model produces the highest prediction, but to give greater weight to models and search strategies that have been supported by actual previous results.  
+
+Step-by-step approach:  
+Step 1 – Update datasets and assess Round 10 results  
+- Add the eight new observations, compare each output with its previous best and identify which strategies produced improvements. This establishes the starting point for the new round.  
+Step 2 – Assess realised model prediction accuracy  
+- Compare the GP and NN predictions made for last week's submitted candidates with the actual outputs received. Calculate absolute prediction errors and identify where each model performed well or poorly. This will provide additional evidence for how much weight each model should receive this round.  
+Step 3 – Refit and diagnose the GP models  
+- Fit the RBF GP models to the expanded datasets and review the fitted length scales and log marginal likelihoods. Particular attention will remain on Functions 1 and 2 because their GP length scales previously collapsed to the lower bound.  
+Step 4 – Revalidate the NN models  
+- Repeat NN LOOCV using the updated datasets and compare the error against the baseline. This will show whether the additional observation changes which functions have sufficiently useful NN models to support candidate selection.  
+Step 5 – Generate updated GP and NN candidates  
+- Generate candidate points using the same core GP acquisition settings and NN approach used previously. Keeping these broadly consistent allows the effect of the additional data to be assessed rather than changing several parts of the methodology simultaneously.  
+Step 6 – Compare candidate agreement and neighbourhoods  
+- Compare where the GP and NN candidates lie and inspect their nearest existing observations. Agreement between models will provide stronger evidence for a region, while large disagreement will indicate greater uncertainty and the need for more careful selection.  
+Step 7 – Apply function-specific refinement  
+- Use the accumulated evidence to decide the appropriate search strategy for each function. Current expectations are tighter refinement for Functions 3 and 7, continued GP-led refinement for Function 4, broader local refinement for Functions 6 and 8, boundary-focused analysis for Function 5, and more cautious/exploratory treatment of Functions 1 and 2. These are starting hypotheses rather than fixed decisions and can change following Steps 2–6.  
+Step 8 – Compare and select final candidates  
+- Bring together recent improvement history, realised prediction accuracy, GP/NN diagnostics, predicted outputs, uncertainty, model agreement and candidate novelty. Select one candidate for each function based on the combined evidence rather than any single metric.  
+Step 9 – Final validation and save  
+- Check every selected candidate for the correct number of dimensions, [0,1] bounds, duplicates and distance from existing observations. Format each to six decimal places, save the Round 11 points and submit them through the portal.  
+
+**Step 1. Update datasets and assess Round 10 results**
+
+The eight Round 10 query points and their returned outputs will first be added to the existing datasets. Before any models are refitted, the new outputs will be compared with the previous best for each function. This provides a direct assessment of whether the strategy used for each function in the previous round produced an improvement.
+The updated datasets will then be checked to confirm that exactly one new observation has been added to each function and saved separately for use throughout the rest of the analysis.
+
+Function 1:  
+Previous best: 0.0000000000  
+New output:    0.0000000000  
+Difference:    -0.0000000000  
+New best:      False   
+
+Function 2:  
+Previous best: 0.7469622512  
+New output:    0.5572172325  
+Difference:    -0.1897450186  
+New best:      False  
+
+Function 3:  
+Previous best: -0.0008627356  
+New output:    -0.0111975944  
+Difference:    -0.0103348588  
+New best:      False  
+
+Function 4:  
+Previous best: 0.3872619363  
+New output:    0.5837298257  
+Difference:    0.1964678893  
+New best:      True  
+
+Function 5:  
+Previous best: 8662.4825000000  
+New output:    8115.4004465113  
+Difference:    -547.0820534887  
+New best:      False  
+
+Function 6:  
+Previous best: -0.2743879717  
+New output:    -0.2397692962  
+Difference:    0.0346186755  
+New best:      True  
+
+Function 7:  
+Previous best: 2.9293698997  
+New output:    2.8391956973  
+Difference:    -0.0901742024  
+New best:      False  
+
+Function 8:  
+Previous best: 9.9570315368  
+New output:    9.9849814249  
+Difference:    0.0279498881  
+New best:      True  
+
+The Round 10 results provide mixed but useful evidence about the strategies used in the previous round. Functions 4, 6 and 8 all produced new bests, supporting the decision to continue local refinement while allowing the size of the local step to vary between functions.  
+Function 4 provides particularly strong support for continued local refinement, with another substantial improvement from 0.387262 to 0.583730. Function 6 also improved following the larger-radius local candidate, although the gain was smaller than some of its previous improvements. Function 8 produced another new best of 9.984981, continuing its recent pattern of smaller improvements as the output approaches 10.  
+The unsuccessful queries are also informative. Function 3 performed considerably worse despite being extremely close to its previous best, suggesting that its strongest region may be narrow and that small movements do not necessarily produce similar outputs. Function 5 fell by around 547 after moving slightly away from [1,1,1,1], providing further evidence that the upper boundary remains particularly important. Function 7 remained relatively strong but failed to improve on its current best.  
+Function 2 also failed to improve, with the output falling from the current best of 0.746962 to 0.557217. This is important because the NN had predicted improvement for the submitted candidate and provides a useful test of how much weight should be placed on its predictions this round. Function 1 remains unresolved, as the broader exploratory query again returned an output effectively equal to zero.  
+Overall, the results reinforce the need for a function-specific strategy. The successful local searches for Functions 4, 6 and 8 support further refinement, while the results for Functions 2, 3, 5 and 7 suggest that model predictions and local movements need to be treated more cautiously.  
+
+**Step 2. Assess realised model prediction accuracy**
+
+The predictions made by the GP and NN models for the Round 10 submitted candidates will be compared with the actual outputs now received. Absolute prediction error will be calculated for each available model prediction, allowing the previous model recommendations to be assessed using genuinely unseen outputs.  
+This adds another measure of model reliability alongside the GP diagnostics and NN LOOCV used previously. The results will be treated as supporting evidence rather than automatically selecting whichever model had the lowest error, as a single realised observation is not enough to establish that one model is consistently more reliable.  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
