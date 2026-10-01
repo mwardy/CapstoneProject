@@ -4670,6 +4670,580 @@ Function 5 continues to test the upper boundary, but the latest realised result 
 Function 8 continues refinement around the latest new best rather than following the NN's much more exploratory global recommendation. This gives greater weight to the GP, which was considerably more accurate on the previous submitted point.  
 Overall, the final set maintains the same balance used throughout the project: exploitation where repeated observations and model performance provide evidence for it, and greater exploration where the models remain unreliable or the optimum is less clearly defined.  
 
+**Module 22 (Week 11)**
+
+**Methodology**
+
+This week, I decided to introduce clustering as an additional way of analysing the structure within the observations collected so far. This follows naturally from the neighbourhood analysis and local refinement used in recent rounds, which have increasingly focused on whether strong individual observations are supported by other high-performing points nearby. Rather than only looking at the closest observations to a candidate, clustering can help identify whether there are broader regions of the search space that consistently perform well. K-Means will therefore be introduced as an additional diagnostic alongside the existing GP and neural-network models, rather than replacing them. The aim is to use the clusters to assess whether current high-performing points belong to genuinely promising regions or are more isolated results. This information can then be combined with previous model accuracy, neighbourhood performance and the existing exploration–exploitation approach to decide whether each function should continue with local refinement or move towards wider exploration. Clustering will only be given weight where the resulting groups appear meaningful, rather than assuming that every function must contain useful cluster structure
+
+Step 1 – Incorporate and assess the latest results  
+- Add the new observations to each function's dataset and compare the outputs with the previous best values. Identify which functions improved and where the latest candidates failed to improve on the existing best.  
+Step 2 – Review realised model prediction accuracy  
+- Compare the latest outputs with the GP and NN predictions made during the previous round. Calculate prediction errors where comparable and use these results as additional evidence of which model currently appears more reliable for each function.  
+Step 3 – Update the existing model diagnostics  
+- Refit the GP models using the expanded datasets and review the fitted kernels, length scales and any warnings. Repeat NN LOOCV validation to determine whether the NN continues to provide useful predictive information relative to the baseline.  
+Step 4 – Analyse optimisation progress  
+- Review the development of the best observed output for each function, including the location of the current best, number of observations since the last improvement and frequency of previous improvements. Use this to distinguish functions that are still responding to local refinement from those showing greater evidence of stagnation.  
+Step 5 – Apply K-Means clustering to the accumulated observations  
+- Apply K-Means to each function's input observations to investigate whether identifiable regions have developed within the search space. Test values of k from 2 to 5 and use silhouette scores to select the most appropriate clustering structure for each function rather than assuming the same number of clusters throughout.  
+Step 6 – Assess cluster performance and relevance  
+- Compare the size, mean output, best output and centroid of each identified cluster. Determine which cluster contains the current best observation and assess whether strong performance is concentrated within a broader region or associated with more isolated observations. Use the silhouette score to determine how much confidence should be placed in the clustering evidence.  
+Step 7 – Generate cluster-guided candidate alternatives  
+- Use the strongest-performing clusters as an additional indication of promising search regions. Generate candidates within these regions and evaluate them using the established GP and NN models, while retaining a minimum distance from previous observations. Treat clustering as supporting evidence rather than automatically selecting cluster centroids or cluster-generated candidates.  
+Step 8 – Generate function-specific refined candidates  
+- Produce a second set of candidate alternatives using strategies tailored to the accumulated evidence for each function. Retain model-independent exploration for F1, NN-supported cluster refinement for F2, local GP–NN refinement where appropriate, and boundary-focused refinement for F5. Adjust GP and NN influence where realised prediction accuracy provides evidence that one model should receive greater weight.  
+Step 9 – Compare candidate alternatives and select provisional points  
+- Compare the cluster-guided and function-specific candidates using predicted performance, model agreement, uncertainty, novelty, clustering evidence and previous optimisation behaviour. Select the stronger candidate for each function rather than applying a single selection rule across all eight.  
+Step 10 – Carry out targeted refinement where required  
+- Perform additional refinement only where the candidate comparison leaves a meaningful unresolved trade-off. For F5, investigate an intermediate novelty range close to the upper boundary to balance the strong evidence around [1,1,1,1] against the value of obtaining a sufficiently distinct new observation.  
+Step 11 – Validate and submit the final candidates  
+- Check each selected point for the correct dimensionality, [0,1] bounds, duplication and distance from existing observations. Once all candidates pass validation, format and submit the final point for each of the eight functions.  
+
+**Step 1. Update datasets and assess Round 11 results**
+
+The latest query results were compared with the previous best output for each function before being added to the datasets. This provides an initial assessment of whether the previous round's strategy produced an improvement and ensures that the new observations are evaluated against the existing data before the models are updated. The new input-output pairs were then added to their respective datasets ready for this week's analysis.  
+
+Function 1:  
+Previous best: 0.0000000000      
+New output:    0.0000000000  
+Difference:    -0.0000000000  
+New best:      False  
+
+Function 2:  
+Previous best: 0.7469622512  
+New output:    0.6661526891  
+Difference:    -0.0808095621  
+New best:      False  
+
+Function 3:  
+Previous best: -0.0008627356  
+New output:    -0.0105822402  
+Difference:    -0.0097195046  
+New best:      False  
+
+Function 4:  
+Previous best: 0.5837298257  
+New output:    0.6229498177  
+Difference:    0.0392199920  
+New best:      True  
+
+Function 5:  
+Previous best: 8662.4825000000  
+New output:    8115.1776552646  
+Difference:    -547.3048447354  
+New best:      False  
+
+Function 6:  
+Previous best: -0.2397692962  
+New output:    -0.2832282435  
+Difference:    -0.0434589472  
+New best:      False  
+
+Function 7:  
+Previous best: 2.9293698997  
+New output:    3.0246097937  
+Difference:    0.0952398940  
+New best:      True  
+
+Function 8:  
+Previous best: 9.9849814249  
+New output:    9.9606106544  
+Difference:    -0.0243707705  
+New best:      False  
+
+Functions 4 and 7 produced new best results. Function 4 improved from 0.583730 to 0.622950, providing further support for the local refinement around the promising region identified in recent rounds. Function 7 also improved from 2.929370 to 3.024610, suggesting that the local region supported by the GP, NN and neighbourhood evidence remains productive.  
+The remaining functions did not improve their existing bests. Function 2 still returned a relatively strong 0.666153, while Function 3 again produced a weaker result close to the current best region. Function 5 returned 8115.18, further supporting the previous evidence that moving away from its best boundary point reduces performance. Functions 6 and 8 remained relatively close to their existing bests but did not improve them. Function 1 again returned a value effectively equal to zero despite wider exploration, showing that it remains difficult to identify a useful high-performing region.  
+Overall, the results support continuing with a function-specific strategy, while this week's clustering analysis should help determine whether the apparent high-performing areas represent consistent regions or are based mainly on isolated observations.  
+
+**Step 2. Review realised model prediction accuracy**
+
+Before refitting the GP and neural-network models with the latest observations, I compared the predictions made during the previous round with the outputs that were actually returned. This provides an out-of-sample check of how accurately each model predicted a point it had not yet observed, rather than assessing performance after the new result has already been included in the training data.  
+For each submitted point, I used the GP and NN predictions recorded at the time the candidate was generated and calculated the absolute difference between the predicted and actual output. Where predictions from both models were available, their errors were compared to identify which model was closer. This builds on the realised prediction analysis introduced in the previous round and allows model reliability to be tracked over time rather than judging a model from a single prediction.  
+Not every submitted point had predictions from both models because some candidates were selected using function-specific methods. Function 1, for example, was chosen through model-independent exploration, while Function 2 was selected through NN-supported local refinement. These missing predictions were therefore left as unavailable rather than estimating them retrospectively.  
+The results will be used alongside model validation, neighbourhood evidence and this week's clustering analysis when deciding how much weight to give the GP and NN for each function.  
+
+Results:  
+For Function 2, only the NN prediction was available. Its prediction of 0.6228 was reasonably close to the actual result of 0.6662, with an absolute error of 0.0433. This provides some support for continuing to consider the NN for F2, although it cannot be directly compared with the GP for this round.  
+For Function 3, the NN was more accurate, with an error of 0.0099 compared with 0.0221 for the GP. Importantly, the GP predicted a positive output while the actual result remained negative, so the NN better reflected the behaviour of the local region.  
+For Function 4, the GP was clearly more accurate. It predicted 0.6499 compared with the actual new best of 0.6229, giving an error of only 0.0270. The NN underestimated the result with a larger error of 0.0889. This strengthens the case for continuing to give the GP considerable weight for F4.  
+For Function 5, both models predicted the result well considering the much larger scale of its outputs. The NN was slightly closer, with an error of 28.87, compared with 41.22 for the GP. The agreement between the two models also supports the evidence that moving slightly away from the [1,1,1,1] boundary would reduce the output.  
+For Function 6, the NN was closer, although both models overestimated the performance of the submitted point. The NN error was 0.0526, compared with 0.0741 for the GP. This suggests some continued value in the NN for F6, but the weaker-than-predicted actual result means the local region should not automatically be exploited further.  
+For Function 7, the GP was more accurate, predicting 2.9806 against the new best of 3.0246, with an error of 0.0440. The NN was also relatively close at 0.0707, meaning both models provided useful evidence for the region that ultimately produced the improvement.  
+For Function 8, the GP was substantially more accurate, with an error of only 0.0235 compared with 0.1246 for the NN. The NN again overestimated the likely output, while the GP closely represented the performance of the submitted point.  
+
+Overall, the realised results support continuing with the function-specific weighting of the two models rather than choosing one model for all eight functions. The GP currently appears particularly useful for F4, F7 and F8, while the NN provided the closer predictions for F3, F5 and F6. F1 remains outside this comparison because its point was deliberately selected through model-independent exploration.  
+
+**Step 3. Updated model diagnostics**
+
+The Gaussian Process models were refitted using the updated datasets containing the latest Round 11 observations. The fitted RBF length scale and log marginal likelihood were then reviewed for each function, together with any optimisation warnings produced during fitting.  
+The length scale provides an indication of how quickly the GP believes each function changes across the input space. Very small values can indicate that the model is struggling to identify a smooth relationship between nearby observations, which has previously been an issue for Functions 1 and 2. The log marginal likelihood is also recorded to provide a consistent model diagnostic across rounds, although it is not used alone to judge whether a model is reliable.  
+This step allows the current GP behaviour to be compared with previous rounds before its predictions are used to generate new candidates. In particular, I want to see whether the additional observations have improved the previously problematic models and whether the GPs for the functions that have responded well to local refinement remain stable.  
+
+Results:  
+Functions 1 and 2 again fitted at the minimum permitted RBF length scale of 1e-05, with the same warning as the previous round. Adding the latest observations has therefore not resolved the GP issue for either function. The extremely small length scale suggests that the GP is still struggling to identify a useful smooth relationship between neighbouring observations, so its predictions should continue to be treated cautiously for these two functions.  
+Function 3's length scale decreased from 0.0968 to 0.0642. The model is therefore representing the function as somewhat more locally variable following the latest observation. There is no optimisation warning, but the smaller length scale provides another reason not to rely too heavily on broad GP predictions for F3.  
+Function 4 decreased slightly from 0.316 to 0.272. This remains a reasonable fitted length scale with no warning, and the GP also predicted the latest new best relatively accurately. Together, this continues to support the GP as useful evidence for F4, particularly around the promising local region.  
+Function 5 increased slightly from 0.338 to 0.359 and remains stable with no warning. The GP continues to appear capable of modelling the strong boundary behaviour observed for this function.  
+Function 6 decreased from 0.518 to 0.470, but remains well away from the kernel bounds with no warning. The GP therefore remains usable, although the latest realised prediction error suggests its recommendations should still be considered alongside the NN and neighbourhood evidence.  
+Function 7 increased slightly from 0.320 to 0.338 and remains stable. This is encouraging given that the latest local refinement produced a new best and the GP predicted that result reasonably accurately.  
+Function 8 is almost unchanged, moving from 1.07 to 1.08. It continues to have the largest fitted length scale and appears to be the smoothest of the functions from the GP's perspective. Combined with its strong realised prediction accuracy, the GP remains particularly useful for F8.  
+
+Overall, the additional observations have not fundamentally changed the GP picture from the previous round. F1 and F2 remain the clear exceptions where the GP is unreliable, while F3–F8 have usable fitted models without optimisation warnings. This supports continuing with the function-specific approach rather than changing the GP methodology across all eight functions.  
+
+**Updated NN LOOCV validation**
+
+The neural-network surrogate was re-evaluated using Leave-One-Out Cross-Validation (LOOCV) after adding the latest observations. For each function, one observation is removed at a time, the NN is trained on the remaining data, and a prediction is made for the excluded observation. The Mean Absolute Error (MAE) across all excluded observations is then calculated.  
+As in the previous round, this is compared with a simple baseline that predicts the mean of the remaining outputs. The NN is considered to add useful predictive information where its LOOCV MAE is lower than the baseline MAE. Repeating this validation after each new round is important because the reliability of the NN may change as more observations are collected and the datasets become increasingly concentrated around promising regions.  
+This validation will not determine candidate selection by itself. Instead, it provides another measure of model reliability to combine with realised prediction accuracy, GP diagnostics, neighbourhood evidence and the clustering analysis introduced this week.  
+
+Results:
+Function 1 remains the clear exception. Although its NN LOOCV MAE improved from 0.0338 to 0.0278, this is still substantially worse than the baseline MAE of only 0.0009. The NN therefore continues to provide little useful predictive information for F1, supporting the decision to keep relying on alternative exploration methods.  
+Function 2 still beats the baseline, although only narrowly. Its NN MAE increased from 0.1933 to 0.2369, compared with a baseline of 0.2392. Combined with the reasonably accurate prediction of the latest result, the NN remains useful for F2, but the small margin over the baseline suggests it should not be relied upon too heavily.  
+Function 3 shows the most important change. Its NN MAE improved from 0.0769 to 0.0460 and it now beats the baseline for the first time in the latest validation. This supports the latest realised result, where the NN was also more accurate than the GP. The NN can therefore be given more consideration for F3 this round, although this improvement is still based on a relatively small dataset.  
+Functions 4 and 5 continue to show clear evidence that the NN is learning useful structure. F4's MAE of 1.4783 remains far below its baseline of 7.7991, while F5 improved substantially from 197.32 to 160.03, compared with a much larger baseline error of 2752.03.  
+Function 6 continues to beat its baseline, although its NN MAE increased from 0.1611 to 0.2398. This reduction in validation performance, together with the latest local refinement failing to improve the best result, suggests some caution is appropriate when using the NN for F6 this week.  
+Function 7 also continues to beat the baseline, although its MAE increased from 0.3494 to 0.4733. The NN therefore remains useful, but the GP was more accurate on the latest submitted point that produced the new best.  
+Function 8 improved noticeably, with its NN MAE falling from 0.5201 to 0.3672, while the baseline remains much higher at 1.0152. The NN therefore continues to capture useful structure, even though the GP was substantially more accurate for the latest submitted point.  
+
+Overall, the NN now beats the baseline for seven of the eight functions, compared with six last round. However, the results reinforce the importance of not treating this as a simple pass/fail test. F2 only narrowly beats its baseline, while F4, F5 and F8 show much clearer improvements over it. These validation results will therefore be considered alongside realised prediction accuracy and the GP diagnostics rather than being used alone.  
+
+**Step 4. Analyse recent optimisation progress**
+
+Before applying clustering, I reviewed the progression of the best observed output for each function. The purpose is to understand whether each optimisation process is still producing meaningful improvements or whether it is beginning to plateau.  
+For each function, the running best is calculated across the observations in the order they were collected. I then compare the current best with the previous improvements and record how many observations have passed since the last new best. This provides a simple measure of optimisation progress without relying on either surrogate model.  
+This is particularly useful for deciding how clustering evidence should later be interpreted. If recent improvements are occurring within a consistent area of the search space, this would support further exploitation of that region. In contrast, if the best value has remained unchanged despite several nearby searches, this may suggest that the current region is becoming exhausted and that wider exploration should receive more weight.  
+The analysis will therefore be used as an additional diagnostic rather than as a fixed rule for candidate selection.  
+
+Results:
+Function 1 shows the clearest plateau. Its best result was found at observation 2, with 17 subsequent observations failing to improve it. There has also been no improvement within the recent window. This reinforces the evidence that neither repeated exploration nor the current surrogate models have identified a reliable route towards improvement.  
+Function 2 also appears to be plateauing. Its current best of 0.746962 was found five observations ago, with no improvement in the recent window. However, the latest result of 0.666153 was still relatively strong, so the promising region should not necessarily be abandoned. Clustering may help establish whether the best point belongs to a broader high-performing region.  
+Function 3 has shown relatively frequent improvement across the optimisation, with seven new bests. Its current best was found only two observations ago, and the recent improvement remains positive. However, the two subsequent local searches have failed to improve it, suggesting that very tight refinement around the current best may now be producing diminishing returns.  
+Function 4 shows the strongest evidence of continued progress. It has produced 12 improvements, including a new best from the latest observation. The recent improvement is also substantial. This strongly supports the existence of a productive region and makes F4 particularly interesting for the clustering analysis.  
+Function 5 has also shown strong historical progress, with 10 improvements and a large increase in the best value over the recent window. However, its best was found three observations ago and subsequent moves away from [1,1,1,1] have performed worse. This increasingly suggests that the upper boundary itself is important rather than simply being part of a broad high-performing region.  
+Function 6 remains relatively active. Its best was found only one observation ago and there has been a positive improvement over the recent window. The latest point failed to improve it, so the evidence supports retaining the promising region while avoiding excessively narrow exploitation until we better understand its structure.  
+Function 7 continues to progress, with the latest observation producing a new best of 3.024610. Although it has recorded fewer total improvements than F4, several have occurred later in the optimisation. This suggests that the current local region remains productive and provides another strong candidate for identifying a meaningful high-performing cluster.  
+Function 8 also remains relatively active. Its current best was found only one observation ago, with positive recent improvement. The latest point was slightly weaker but still strong, suggesting that the region remains promising even though the most recent refinement did not improve the incumbent.  
+Overall, there is a useful distinction emerging. F4 and F7 are still actively improving; F3, F5, F6 and F8 have relatively recent bests but may be approaching local plateaus; F2 has gone longer without improvement; and F1 is clearly the most stagnant.  
+
+**Step 5. Apply K-Means clustering**
+
+K-Means clustering was introduced to investigate whether the accumulated observations form identifiable regions within each function's input space. This develops the neighbourhood analysis used in previous rounds by considering groups of observations rather than only the points immediately surrounding individual candidates.  
+The clustering is applied to the input variables only, rather than including the output as a clustering feature. This allows the algorithm to identify regions of the search space independently of their performance. The outputs can then be compared afterwards to determine whether any of the identified regions are consistently stronger than others. This avoids effectively telling the clustering algorithm which observations are good before assessing the resulting groups.  
+Rather than choosing the number of clusters arbitrarily, I tested values of k from 2 to 5 for each function. The silhouette score is used to compare these alternatives, with a higher score indicating that observations are generally more similar to their own cluster than to neighbouring clusters. The value of k with the highest silhouette score is retained as an initial choice.  
+The selected number of clusters will not automatically be assumed to represent meaningful optimisation structure. In the next stage, the outputs within each cluster will be examined to determine whether the clustering actually separates high- and low-performing regions. This is particularly important because K-Means will divide the observations into clusters even when the underlying structure is weak.  
+
+Results:
+The clustering strength varies considerably between the functions. Function 2 shows the clearest cluster structure, selecting three clusters with a silhouette score of 0.6462. Function 5 also shows reasonably clear separation, selecting two clusters with a score of 0.4331, while Function 1 selects four clusters with a moderate score of 0.4066.  
+Functions 3, 4 and 7 show weaker separation, with their best silhouette scores around 0.30. This suggests that K-Means can divide the observations into groups, but those groups are not particularly strongly separated in the input space.  
+Functions 6 and particularly 8 show the weakest clustering structure. F6's best score is 0.2572, while F8 reaches only 0.1853. The F8 result is especially important because it suggests that forcing its 50 observations into clusters may not provide particularly meaningful information.  
+
+Overall, the results support exactly the cautious approach we planned: clustering appears potentially informative for some functions, especially F2 and F5, but should not automatically be given equal weight across all eight functions.  
+
+**Step 6. Analyse cluster performance**
+
+Having identified the clustering structure for each function, I next compared the performance of the resulting clusters. For each cluster, I recorded its size, mean output, best output and centroid, and identified the cluster containing the current best observation. This allowed me to assess whether the strongest individual observations were supported by a broader high-performing region.  
+The results were considered alongside the silhouette scores from the previous step. Where cluster separation was relatively strong and one cluster also showed better output performance, I placed greater confidence in the clustering evidence. Where separation was weak, the results were treated more cautiously and used only as supporting evidence alongside the existing GP, NN and neighbourhood analysis.    
+
+Function 1  
+- Selected k: 4  
+- Silhouette score: 0.4066  
+- Best observation: 2  
+- Best cluster: 0  
+- Cluster mean: -0.000515  
+- Cluster best output: 0.000000  
+- Interpretation: Moderate cluster separation, but no clearly superior region is identified. Clustering adds limited new information for F1.  
+
+Function 2  
+- Selected k: 3  
+- Silhouette score: 0.6462  
+- Best observation: 14  
+- Best cluster: 2  
+- Cluster mean: 0.591846  
+- Cluster best output: 0.746962  
+- Interpretation: Strong cluster separation and the best observation lies within the strongest-performing cluster. This provides good evidence for continuing to refine this region.  
+  
+Function 3  
+- Selected k: 5  
+- Silhouette score: 0.3073  
+- Best observation: 22  
+- Best cluster: 2  
+- Cluster mean: -0.046103  
+- Cluster best output: -0.000863  
+- Interpretation: The best observation is within the strongest cluster, supporting the current search region, although the relatively weak separation means clustering should remain secondary evidence.  
+  
+Function 4  
+- Selected k: 5  
+- Silhouette score: 0.3068  
+- Best observation: 39  
+- Best cluster: 0  
+- Cluster mean: -5.322216  
+- Cluster best output: 0.622950  
+- Interpretation: Cluster separation is fairly weak, but the best cluster performs substantially better than the alternatives. This supports continued local refinement around the current high-performing region.  
+  
+Function 5  
+- Selected k: 2  
+- Silhouette score: 0.4331  
+- Best observation: 26  
+- Best cluster: 1  
+- Cluster mean: 5678.018467  
+- Cluster best output: 8662.482500  
+- Interpretation: Clear performance separation between the two clusters. The strongest cluster is concentrated towards high input values, strongly supporting the existing boundary-focused strategy.  
+  
+Function 6  
+- Selected k: 4  
+- Silhouette score: 0.2572  
+- Best observation: 28  
+- Best cluster: 2  
+- Cluster mean: -0.596464  
+- Cluster best output: -0.239769  
+- Interpretation: The best observation lies within the strongest-performing cluster, but weak cluster separation means this should mainly be used as supporting evidence.  
+  
+Function 7  
+- Selected k: 5  
+- Silhouette score: 0.3002  
+- Best observation: 39  
+- Best cluster: 1  
+- Cluster mean: 1.983345  
+- Cluster best output: 3.024610  
+- Interpretation: Despite relatively weak cluster separation, the best cluster performs substantially better than all others. This strongly supports the promising region identified in recent rounds.  
+  
+Function 8  
+- Selected k: 4  
+- Silhouette score: 0.1853  
+- Best observation: 48  
+- Best cluster: 0  
+- Cluster mean: 9.669458  
+- Cluster best output: 9.984981  
+- Interpretation: The best observation lies within the strongest-performing cluster, but the very low silhouette score means clustering should have limited influence on the next selection.  
+
+Overall Interpretation
+- The clustering analysis provides useful additional evidence that several of the high-performing observations found in previous rounds are part of broader promising regions rather than isolated good results.  
+- F2 and F5 provide the strongest clustering evidence. Both have relatively good silhouette scores and clear differences in output between their clusters, giving greater confidence in their identified high-performing regions.  
+- F4 and F7 also show useful patterns. Their silhouette scores are weaker, but the clusters containing the current best observations perform substantially better than the alternatives.  
+- F3 and F6 provide supporting evidence for regions already identified through the GP, NN and local-refinement methods, although their weaker cluster separation means K-Means should not be relied upon independently.
+- F1 provides limited additional information, as several clusters produce outputs effectively equal to zero and no clearly superior region emerges.  
+- F8 should be treated most cautiously, as its silhouette score of 0.1853 indicates weak separation despite the best-performing observations being concentrated in one cluster.  
+- Overall, the results suggest that clustering should be used as another source of evidence alongside the GP, NN, neighbourhood analysis and previous optimisation results, rather than replacing those methods.  
+- For the next candidate-selection stage, the influence of clustering can therefore be function-specific: stronger for F2 and F5, useful supporting evidence for F3, F4, F6 and F7, and relatively limited for F1 and F8.
+
+How the clustering results will be used:
+The clustering results will be incorporated into the existing function-specific optimisation strategy rather than used as a standalone method. Where the clustering evidence is relatively strong, particularly for Functions 2 and 5, the identified high-performing regions will be given greater consideration when generating the next candidates. For Functions 3, 4, 6 and 7, the clusters provide additional support for promising regions already identified through the GP, NN and neighbourhood analysis, but will be considered alongside these existing methods. Clustering will have less influence on Functions 1 and 8, where the results provide weaker evidence of clearly separated regions.  
+The cluster centroids will not be treated as optimal points themselves. Instead, the clusters will help identify areas of the input space in which candidate searches can be focused. This allows the new clustering analysis to contribute to candidate selection while retaining the exploration, local refinement and model-comparison methods developed in previous rounds.  
+
+**Step 7. Cluster-guided candidate generation**
+
+The clustering results were incorporated into candidate generation by using the strongest-performing clusters as an additional indication of promising areas within each function's search space. Rather than treating cluster centroids as candidate points directly, the clusters were used to define regions in which further optimisation could be investigated.  
+The influence of clustering was varied by function according to the strength of the evidence identified in the previous step. For functions such as F2 and F5, where relatively clear clusters corresponded with substantial differences in output performance, cluster membership was given greater weight. For functions with weaker silhouette scores, clustering was treated as supporting evidence alongside the existing GP, NN and neighbourhood results.  
+Candidate points within promising regions can then be evaluated using the established models. GP predictions and uncertainty provide the existing exploration–exploitation evidence, while NN predictions are considered where validation suggests that the model is useful. Distance from previous observations is also retained to avoid repeatedly selecting almost identical points.  
+This approach allows the new unsupervised-learning method to contribute to the optimisation without replacing the function-specific strategy developed over previous rounds.  
+
+Cluster-Guided Candidate Results:
+
+Function 2  
+- Candidate: [0.729306, 0.186865]  
+- GP prediction: 0.365797  
+- NN prediction: 0.661354  
+- Nearest distance: 0.027213  
+- Interpretation: The NN gives a relatively strong prediction within the best-performing cluster, while the GP remains much less optimistic and highly uncertain. Given the continuing GP length-scale problem for F2, the NN and strong clustering evidence are more informative here. However, the candidate is fairly close to an existing observation.  
+
+Function 3  
+- Candidate: [0.428667, 0.516401, 0.455178]  
+- GP prediction: 0.037513  
+- NN prediction: -0.012296  
+- Nearest distance: 0.039857  
+- Interpretation: The GP predicts a substantial improvement over the current best of -0.000863, but the NN does not support this. This disagreement makes the candidate interesting but relatively uncertain and suggests it should be compared with a more conservative local alternative.  
+
+Function 4  
+- Candidate: [0.397404, 0.357252, 0.361581, 0.434077]  
+- GP prediction: 0.722666  
+- NN prediction: 0.412112  
+- Nearest distance: 0.021532  
+- Interpretation: The GP predicts another improvement over the new best of 0.622950, while the NN is considerably less optimistic. The point lies close to the productive region already identified, so it provides a plausible exploitation candidate, although its low novelty should be considered.  
+
+Function 5  
+- Candidate: [0.989719, 0.999174, 0.994916, 0.997164]  
+- GP prediction: 8321.19  
+- NN prediction: 8326.64  
+- Nearest distance: 0.011843  
+- Interpretation: Excellent GP–NN agreement and the candidate lies exactly where the clustering analysis suggested performance should be strongest. However, both models predict an output below the existing best of 8662.48 and the point is extremely close to previously sampled observations. This supports the boundary hypothesis but does not yet provide a compelling next query.  
+
+Function 6  
+- Candidate: [0.410753, 0.388161, 0.491811, 0.803802, 0.010713]  
+- GP prediction: -0.228475  
+- NN prediction: -0.216792  
+- Nearest distance: 0.050226  
+- Interpretation: This is one of the more convincing candidates. Both models agree closely and both predict an improvement over the current best of -0.239769. It also maintains reasonable novelty while remaining within the strongest-performing cluster.  
+
+Function 7  
+- Candidate: [0.152047, 0.265662, 0.514461, 0.311439, 0.322715, 0.733203]  
+- GP prediction: 3.087322  
+- NN prediction: 3.020521  
+- Nearest distance: 0.110278  
+- Interpretation: Particularly promising. Both models broadly agree, the GP predicts an improvement over the current best of 3.024610, and the candidate has good novelty. This provides strong support for further refinement within the high-performing cluster.  
+
+Function 8  
+- Candidate: [0.046424, 0.134033, 0.255486, 0.042918, 0.790873, 0.568371, 0.062756, 0.628240]  
+- GP prediction: 9.933104  
+- NN prediction: 10.252357  
+- Nearest distance: 0.196623  
+- Interpretation: The NN predicts an improvement over the current best of 9.984981, whereas the GP predicts a slightly weaker result. The candidate has substantial novelty, which is useful in eight dimensions, but the weak clustering structure for F8 means this should remain an alternative rather than becoming the preferred candidate solely because of the NN prediction.  
+
+Overall Interpretation  
+The cluster-guided search has produced several useful candidates, but the evidence varies considerably between functions. F6 and F7 stand out because the GP and NN broadly agree on strong candidates that also retain reasonable distance from previous observations. F2 is supported by the NN and particularly strong clustering evidence, although its GP remains unreliable.  
+F3 and F4 produce potentially strong candidates according to the GP, but disagreement with the NN suggests that further comparison is worthwhile before selecting them. F5 provides further confirmation of the strong upper-boundary region, but the candidate is extremely close to existing observations and is predicted to remain below the current best. F8 offers considerably greater novelty and a strong NN prediction, although its weak cluster separation means clustering itself provides limited additional confidence.  
+Overall, these results support using the cluster-guided candidates as additional alternatives rather than automatically selecting them for submission, as planned.  
+
+**Step 8. Function-specific candidate refinement**
+
+Following the cluster-guided candidate generation, additional candidate alternatives were produced using a function-specific strategy. This reflects the fact that the eight functions now show substantially different behaviour and that no single optimisation method has performed consistently best across all of them.  
+The strategy for each function was based on the accumulated evidence from previous rounds, including GP diagnostics, NN validation, realised prediction accuracy, optimisation progress, neighbourhood behaviour and the new clustering results. Functions with reliable surrogate models and clearly identified high-performing regions were refined locally, while functions with weaker models or evidence of stagnation retained a greater emphasis on exploration.  
+The relative influence of the models was also adjusted where there was evidence to support doing so. For F2, the GP was given little weight in candidate selection because its RBF length scale remained at the lower bound of 1e-05, while the NN continued to pass LOOCV validation and the clustering analysis identified relatively strong regional structure. F2 was therefore refined using the NN within its strongest-performing cluster.  
+For F4 and F8, the GP was given greater weight because its predictions were more accurate than the NN when compared with the realised Round 11 outputs. For F4 and F8, greater weight was given to the GP because it was more accurate than the NN on the latest realised outputs. The GP received particularly strong weighting for F8 because the difference in prediction error between the two models was larger. The remaining locally refined functions retained a balanced GP–NN weighting where there was not sufficient evidence to favour one model strongly over the other.  
+A minimum distance from previous observations was also retained to avoid repeatedly sampling almost identical points. This was particularly relevant for F5, where the cluster-guided candidate was only 0.011843 from an existing observation. The boundary-refinement search therefore required a minimum nearest-observation distance of 0.03, allowing the search to remain focused on the strongly performing upper-boundary region while providing greater novelty.  
+The purpose of this stage was not to automatically select the candidate with the highest predicted output. Instead, the function-specific candidates were generated as alternatives to the cluster-guided candidates so that predicted performance, model agreement, uncertainty, novelty and regional evidence could be compared before the final submission points were chosen.  
+
+The following strategies were used:  
+- F1: model-independent exploration due to continued GP failure, poor NN validation and long-term stagnation.  
+- F2: NN-supported refinement within the strongly identified high-performing cluster, with the GP given little influence.  
+- F3: local GP/NN refinement around the current best and high-performing cluster.  
+- F4: local refinement around the latest new best, with greater emphasis on the GP following its recent predictive accuracy.  
+- F5: boundary refinement around [1,1,1,1], while enforcing greater novelty than the cluster-generated candidate.  
+- F6: GP–NN local refinement within the identified high-performing region.  
+- F7: GP–NN local refinement around the new best and strongest-performing cluster.  
+- F8: GP-led refinement around the current high-performing region, with clustering receiving relatively little weight due to its weak silhouette score.
+
+Results:
+
+Function 1  
+- Strategy: Model-independent exploration  
+- Current best: 0.000000  
+- Candidate: [0.249506, 0.999107]  
+- Nearest distance: 0.246275  
+- Interpretation: The candidate provides substantial novelty in an unexplored part of the search space. With the GP remaining unreliable, the NN failing validation and no recent improvement, continued model-independent exploration remains the most appropriate strategy.  
+  
+Function 2  
+- Strategy: NN-supported cluster refinement  
+- Current best: 0.746962  
+- Candidate: [0.665824, 0.186906]  
+- NN prediction: 0.619287  
+- Nearest distance: 0.036269  
+- Interpretation: The candidate remains within the strongest-performing cluster while providing slightly greater novelty than the earlier cluster-guided candidate. Although the predicted output is below the current best, the strong clustering evidence and validated NN continue to support refinement within this region.  
+
+Function 3  
+- Strategy: Local GP–NN refinement  
+- Current best: -0.000863  
+- Candidate: [0.428706, 0.513778, 0.457382]  
+- GP prediction: 0.037818  
+- NN prediction: -0.012456  
+- GP uncertainty: 0.020776  
+- Nearest distance: 0.038875  
+- Interpretation: The GP predicts a meaningful improvement over the current best, while the NN remains more cautious. This disagreement means the candidate is less certain, although both the clustering and previous local analysis support continued investigation of this region.  
+
+Function 4  
+- Strategy: GP-weighted local refinement  
+- Current best: 0.622950   
+- Candidate: [0.400697, 0.362771, 0.375829, 0.441739]  
+- GP prediction: 0.744666  
+- NN prediction: 0.352589  
+- GP uncertainty: 0.118732  
+- Nearest distance: 0.035225  
+- Interpretation: The GP predicts another improvement over the latest best and the candidate provides greater novelty than the cluster-guided alternative. The NN is considerably more cautious, but the GP has recently been the more accurate model for F4 and the candidate remains within the strongly performing region.  
+
+Function 5  
+- Strategy: Novel boundary refinement  
+- Current best: 8662.482500  
+- Candidate: [0.967622, 0.993026, 0.997140, 0.999716]  
+- GP prediction: 7899.378880  
+- NN prediction: 7935.631782  
+- GP uncertainty: 6.712195  
+- Nearest distance: 0.033245  
+- Interpretation: Both models agree that this remains a very high-performing region, but neither predicts an improvement over the existing best at [1,1,1,1]. The candidate provides more novelty than the earlier cluster candidate while retaining the boundary-focused strategy. The evidence increasingly suggests that the optimum may lie directly at or extremely close to the upper boundary.  
+
+Function 6  
+- Strategy: Local GP–NN refinement  
+- Current best: -0.239769  
+- Candidate: [0.400874, 0.395758, 0.500319, 0.800539, 0.004733]  
+- GP prediction: -0.228270  
+- NN prediction: -0.211156  
+- GP uncertainty: 0.015295  
+- Nearest distance: 0.053264  
+- Interpretation: Both models predict an improvement over the current best and show relatively close agreement. The candidate also maintains reasonable novelty while remaining within the high-performing region identified by the clustering analysis. This is one of the stronger candidates produced in this stage.  
+
+Function 7  
+- Strategy: Local GP–NN refinement  
+- Current best: 3.024610  
+- Candidate: [0.176017, 0.276563, 0.482241, 0.296795, 0.315358, 0.706009]  
+- GP prediction: 3.128395  
+- NN prediction: 3.071368  
+- GP uncertainty: 0.095238  
+- Nearest distance: 0.082579  
+- Interpretation: Both models predict an improvement over the new current best and show good agreement. The candidate also retains reasonable novelty and remains within the high-performing region identified through clustering and previous local refinement. This provides particularly strong evidence for continued exploitation of this region.  
+
+Function 8  
+- Strategy: GP-weighted local refinement  
+- Current best: 9.984981  
+- Candidate: [0.077042, 0.136953, 0.185881, 0.169530, 0.768770, 0.510795, 0.209002, 0.691691]  
+- GP prediction: 9.998146  
+- NN prediction: 9.986669  
+- GP uncertainty: 0.034109  
+- Nearest distance: 0.109510  
+- Interpretation: Both models give predictions close to or slightly above the current best and show much stronger agreement than for the earlier cluster-guided candidate. Given the GP's stronger recent accuracy and the weak clustering evidence for F8, this candidate provides a more convincing balance of predicted performance and novelty.  
+
+Overall Interpretation  
+- The function-specific refinement has produced particularly promising candidates for F6, F7 and F8, where model predictions are relatively consistent and the candidates retain useful novelty.  
+- F4 also remains promising, although there is considerably greater disagreement between the GP and NN. Recent realised prediction accuracy provides a reason to give the GP greater weight.  
+- F3 shows a similar GP–NN disagreement, so further comparison is warranted before selecting the final point.  
+- F2 continues to support the same high-performing cluster identified previously, although neither the latest NN candidate nor the previous cluster candidate is predicted to exceed the current best.  
+- F5 increasingly supports the conclusion that performance improves towards the extreme upper boundary. Both models predict the more novel candidate below the existing [1,1,1,1] result, so further movement away from the boundary may have limited value.  
+- F1 remains fundamentally different from the other functions. With no reliable surrogate signal or recent improvement, the new point deliberately prioritises exploration rather than predicted performance.  
+- Overall, the results reinforce the value of a function-specific approach. The new clustering analysis has added useful regional information, but the strongest candidates emerge when that information is combined with the GP, NN, realised model accuracy, novelty and previous optimisation behaviour.  
+ 
+**Step 9. Final Candidate Comparison**
+
+The final candidate comparison combined the evidence generated throughout the current and previous rounds rather than selecting points solely according to their predicted output. For each function, the cluster-guided and function-specific candidates were compared using model predictions, model agreement, uncertainty, distance from previous observations, clustering evidence and the historical behaviour of the function.  
+Greater weight was placed on models that had demonstrated stronger validation or realised prediction accuracy for the individual function. Novelty was also considered to ensure that additional queries provided useful new information rather than repeatedly sampling almost identical locations. Where the available evidence remained conflicting, the more conservative candidate was preferred or further targeted refinement was considered before final selection.  
+This allowed the new clustering evidence to be incorporated without changing the function-specific approach developed over previous rounds.  
+
+Function 1  
+- Current best: 0.000000  
+- Refined candidate: [0.249506, 0.999107]  
+- Nearest distance: 0.246275  
+- Preferred approach: Refined candidate  
+- Reason: There is still no reliable GP or NN signal and clustering did not identify a clearly superior region. The candidate therefore deliberately targets a substantially unexplored part of the space. This is consistent with the model-independent exploration strategy already established for F1.  
+
+Function 2  
+Cluster candidate  
+- Candidate: [0.729306, 0.186865]  
+- NN prediction: 0.661354  
+- Nearest distance: 0.027213  
+Refined candidate  
+- Candidate: [0.665824, 0.186906]  
+- NN prediction: 0.619287  
+- Nearest distance: 0.036269  
+Current best: 0.746962  
+- Initial preference: Cluster candidate  
+- Reason: Neither candidate is predicted to improve on the current best, but the cluster candidate has the stronger NN prediction. Its slightly lower novelty is still sufficient to provide a distinct query. The GP should not influence this comparison because its fitted length scale remains unreliable.  
+
+Function 3  
+Cluster candidate  
+- Candidate: [0.428667, 0.516401, 0.455178]  
+- GP prediction: 0.037513  
+- NN prediction: -0.012296  
+- Nearest distance: 0.039857  
+Refined candidate  
+- Candidate: [0.428706, 0.513778, 0.457382]  
+- GP prediction: 0.037818  
+- NN prediction: -0.012456  
+- Nearest distance: 0.038875  
+Current best: -0.000863  
+- Initial preference: Refined candidate, but only marginally  
+- Reason: The two candidates are extremely similar and provide almost identical evidence. The refined point has the slightly stronger GP prediction, while the cluster point has marginally stronger NN and novelty evidence. There is effectively no meaningful strategic difference between them, so I would not spend another stage optimising between these two.  
+
+Function 4  
+Cluster candidate  
+- Candidate: [0.397404, 0.357252, 0.361581, 0.434077]  
+- GP prediction: 0.722666  
+- NN prediction: 0.412112  
+- Nearest distance: 0.021532  
+Refined candidate  
+- Candidate: [0.400697, 0.362771, 0.375829, 0.441739]  
+- GP prediction: 0.744666  
+- NN prediction: 0.352589  
+- Nearest distance: 0.035225  
+Current best: 0.622950  
+- Initial preference: Refined candidate  
+- Reason: The refined candidate has the stronger GP prediction and substantially greater novelty. Although its NN prediction is weaker, the GP was considerably more accurate on the realised Round 11 result and was deliberately given greater influence for this function.  
+
+Function 5  
+Cluster candidate  
+- Candidate: [0.989719, 0.999174, 0.994916, 0.997164]  
+- GP prediction: 8321.19  
+- NN prediction: 8326.64  
+- Nearest distance: 0.011843  
+Refined candidate  
+- Candidate: [0.967622, 0.993026, 0.997140, 0.999716]  
+- GP prediction: 7899.38  
+- NN prediction: 7935.63  
+- Nearest distance: 0.033245  
+Current best: 8662.48 at [1,1,1,1]  
+- Initial preference: Cluster candidate if choosing strictly between these two.  
+- Reason: It has considerably stronger predicted performance and remains extremely close to the known optimum region. However, its novelty is very low and neither model expects it to beat [1,1,1,1]. F5 is one function where I think one final targeted check is justified before submission, because we may be able to find a better compromise between the two candidates: closer to the boundary than the refined candidate but with more novelty than 0.0118.  
+
+Function 6  
+Cluster candidate  
+- Candidate: [0.410753, 0.388161, 0.491811, 0.803802, 0.010713]  
+- GP prediction: -0.228475  
+- NN prediction: -0.216792  
+- Nearest distance: 0.050226  
+Refined candidate  
+- Candidate: [0.400874, 0.395758, 0.500319, 0.800539, 0.004733]  
+- GP prediction: -0.228270  
+- NN prediction: -0.211156  
+- Nearest distance: 0.053264  
+Current best: -0.239769  
+- Initial preference: Refined candidate  
+- Reason: This is a fairly clear comparison. Both models predict an improvement, both slightly favour the refined point, and it also has marginally greater novelty.  
+
+Function 7  
+Cluster candidate  
+- Candidate: [0.152047, 0.265662, 0.514461, 0.311439, 0.322715, 0.733203]  
+- GP prediction: 3.087322  
+- NN prediction: 3.020521  
+- Nearest distance: 0.110278  
+Refined candidate  
+- Candidate: [0.176017, 0.276563, 0.482241, 0.296795, 0.315358, 0.706009]  
+- GP prediction: 3.128395  
+- NN prediction: 3.071368  
+- Nearest distance: 0.082579  
+Current best: 3.024610  
+- Initial preference: Refined candidate  
+- Reason: Both GP and NN predict an improvement over the current best and both favour the refined candidate. Although the cluster candidate has greater novelty, 0.0826 is already a substantial distance from the existing observations.  
+
+Function 8  
+Cluster candidate  
+- Candidate: [0.046424, 0.134033, 0.255486, 0.042918, 0.790873, 0.568371, 0.062756, 0.628240]  
+- GP prediction: 9.933104  
+- NN prediction: 10.252357  
+- Nearest distance: 0.196623  
+Refined candidate  
+- Candidate: [0.077042, 0.136953, 0.185881, 0.169530, 0.768770, 0.510795, 0.209002, 0.691691]  
+- GP prediction: 9.998146  
+- NN prediction: 9.986669  
+- Nearest distance: 0.109510  
+Current best: 9.984981  
+- Initial preference: Refined candidate  
+- Reason: The refined candidate has much stronger model agreement and the GP predicts a slight improvement over the current best. This is more persuasive than the very optimistic NN prediction for the cluster candidate, particularly because the GP substantially outperformed the NN on the latest realised result and F8's clustering structure was weak.  
+
+**Step 10. F5 Targeted Boundary Check**
+
+F5 was given one final targeted refinement because both the clustering and previous optimisation results provide strong evidence that performance increases towards the upper boundary of the search space. The current best remains [1,1,1,1] with an output of 8662.4825, while both the cluster-guided and more novel candidates were predicted to perform below this value.  
+Rather than repeating either search, an intermediate novelty range was examined to determine whether a better balance could be found between remaining close to the high-performing boundary and obtaining useful new information. Candidates were therefore generated close to [1,1,1,1] and required to be between 0.02 and 0.04 from the nearest existing observation.  
+The candidates were evaluated using both the GP and NN models. As both models have performed well for F5 and the NN substantially outperforms its baseline under LOOCV, their standardised predictions were weighted equally. The resulting candidate can then be compared with the previous cluster-guided and novelty-constrained alternatives before the final F5 point is selected.  
+
+Current best: 8662.482500 at [1.000000, 1.000000, 1.000000, 1.000000]  
+Targeted candidate: [0.981966, 0.999701, 0.990442, 0.998795]  
+GP prediction: 8141.386269  
+NN prediction: 8155.828807  
+GP uncertainty: 4.961240  
+Nearest distance: 0.020448  
+Interpretation: The targeted candidate provides an intermediate balance between predicted performance and novelty. Both models agree closely, but both still predict performance below the current best. Together with the previous alternatives, the results show a consistent pattern in which predicted performance decreases as candidates move further away from [1,1,1,1]. This provides further evidence that the best-performing region identified so far appears to lie at or very close to the upper boundary.  
+
+**Step 11. Final Candidate Validation**
+
+Before submission, the eight selected candidates were subjected to a final validation check. Each point was checked to ensure that it contained the correct number of dimensions for its function, all values remained within the permitted [0,1] range, and the candidate did not duplicate an existing observation.  
+The Euclidean distance to the nearest existing observation was also calculated. This provides a final measure of novelty and confirms how closely each candidate samples an area that has already been evaluated. This final stage does not alter the optimisation strategy, but acts as a safeguard against invalid or unnecessarily duplicated submissions.  
+
+Final Validation Results  
+- All eight candidates have the correct number of dimensions.  
+- All values are within the permitted [0,1] range.  
+- No duplicate observations were identified.  
+- Nearest-observation distances range from 0.020448 for F5 to 0.246275 for F1.  
+- The relatively small distance for F5 is intentional, reflecting the strong evidence that performance increases towards [1,1,1,1].  
+- F1 has the greatest novelty, consistent with the model-independent exploration strategy.  
+- F6, F7 and F8 retain increasingly substantial novelty of 0.053264, 0.082578 and 0.109510, respectively, despite remaining focused on their identified high-performing regions.  
+- Overall validation: PASSED. The eight candidates can therefore be carried forward for submission.  
+
+
 
 
 
@@ -4685,3 +5259,4 @@ Week 7: Systematically tune UCB and EI hyperparameters, assess candidate stabili
 Week 8: Strengthen the function-specific approach by comparing GP and NN recommendations with the performance of nearby observations, using model diagnostics and validation to decide which model should receive greater weight for each function.  
 Week 9: Introduce multi-radius local refinement around established high-performing regions, alongside novelty constraints and model-independent exploration where appropriate, to balance small improvements against gathering new information.  
 Week 10: Evaluate the realised accuracy of the previous round's GP and NN predictions, update model diagnostics and NN validation, and use this evidence to refine the function-specific strategy. Local searches, novelty constraints and model-independent exploration are then used selectively rather than applying a single optimisation method across all functions.  
+Week 11: Introduce K-Means clustering to identify broader high-performing regions within each function’s search space and assess how meaningful those regions are using silhouette scores and cluster performance. Combine this new regional evidence with GP and NN predictions, realised model accuracy, local refinement and novelty to generate and compare function-specific candidates before final selection.  
