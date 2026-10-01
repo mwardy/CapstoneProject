@@ -1,0 +1,21 @@
+Motivation
+This dataset was created as part of the Black-Box Optimisation (BBO) capstone project. The project involves eight unknown functions of different dimensions, with the aim of selecting input values that maximise the output of each function.
+The dataset supports this optimisation process by providing the observations needed to train and compare different models, generate new query points and assess how successful previous decisions have been.
+
+Composition
+The dataset contains input and output observations for eight separate black-box functions. The functions range from 2 to 8 dimensions, with all input values bounded between 0 and 1.
+The number of observations differs between functions because different amounts of initial data were provided. Following the tenth round, Functions 1–8 contain 19, 19, 24, 39, 29, 29, 39 and 49 observations respectively.
+Each observation contains an input vector and its corresponding scalar output. There are no missing values within the dataset. However, coverage of the overall search space is limited, particularly for the higher-dimensional functions, and some areas have been sampled more heavily as promising regions have been identified.
+
+Collection Process
+The initial observations were provided at the beginning of the capstone project. During each round, one new query point was selected for each function and submitted to the BBO platform. The resulting output was then added to the existing dataset and used during the following round.
+The query-generation strategy developed throughout the project. It began with a Gaussian Process and UCB approach before introducing GP diagnostics, alternative kernels, SVM classification, different UCB and Expected Improvement settings, and a neural-network surrogate. Later rounds increasingly compared model predictions, previous prediction accuracy, neighbourhood performance and local refinement around promising regions.
+This allowed the strategy to become more function-specific as more observations became available.
+
+Preprocessing and Uses
+No major preprocessing transformations were applied to the underlying dataset. Inputs were already bounded between 0 and 1, and the original input and output values were retained when new observations were added.
+The dataset is intended for fitting and evaluating surrogate models, generating new query points and analysing the performance of the optimisation strategy. It should not be treated as a complete representation of the underlying functions because only a small proportion of each search space has been observed. The later observations are also influenced by earlier optimisation decisions, meaning that the data is increasingly concentrated around areas believed to perform well.
+
+Distribution and Maintenance
+The dataset is maintained as part of my BBO capstone project and will be made available through the project's GitHub repository.
+Updated versions have been saved throughout the project as new observations have been collected. I maintain the dataset myself, and no further updates are expected once the capstone project and final submissions have been completed.
