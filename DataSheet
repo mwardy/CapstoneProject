@@ -1,8 +1,8 @@
-Motivation
+**Motivation**
 This dataset was created as part of the Black-Box Optimisation (BBO) capstone project. The project involves eight unknown functions of different dimensions, with the aim of selecting input values that maximise the output of each function.
 The dataset supports this optimisation process by providing the observations needed to train and compare different models, generate new query points and assess how successful previous decisions have been.
 
-Composition
+**Composition**
 The dataset contains input and output observations for eight separate black-box functions. The functions range from 2 to 8 dimensions, with all input values bounded between 0 and 1.
 The number of observations differs between functions because different amounts of initial data were provided. Following the tenth round, Functions 1–8 contain 19, 19, 24, 39, 29, 29, 39 and 49 observations respectively.
 Each observation contains an input vector and its corresponding scalar output. There are no missing values within the dataset. However, coverage of the overall search space is limited, particularly for the higher-dimensional functions, and some areas have been sampled more heavily as promising regions have been identified.
