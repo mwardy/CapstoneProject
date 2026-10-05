@@ -5420,7 +5420,7 @@ PCA will now be introduced as an additional source of evidence to investigate th
 
 **Step 5. Apply PCA to each function**
 
-PCA was applied separately to the accumulated input observations for each function. The inputs were centred and scaled before PCA so that each dimension contributed on a comparable basis. The proportion of variance explained by each principal component was then calculated, together with the cumulative explained variance.  
+PCA was applied separately to the accumulated input observations for each function. Although all inputs were already on the same 0–1 scale, standardisation was retained so that PCA focused on relationships between dimensions rather than allowing dimensions with greater sampled variance to dominate. The proportion of variance explained by each principal component was then calculated, together with the cumulative explained variance.  
 The purpose of this stage was to determine whether the variation within each function's observations could be represented by a smaller number of underlying directions. The number of components required to explain approximately 80%, 90% and 95% of the observed variation was also recorded. At this stage, PCA was treated only as a description of the structure within the sampled inputs; a component explaining substantial input variation does not necessarily mean that it is important for achieving higher outputs.  
 
 Results  
@@ -5440,7 +5440,7 @@ For F1 and F2, the original problems are already only two-dimensional, so PCA is
 **Step 6. Examine PCA loadings and relationship with output**
 
 The PCA results were examined in more detail by looking at the loadings of each original input dimension on the principal components. This shows which dimensions contribute most strongly to each PCA direction.  
-The PCA scores for each observation were then compared with the corresponding function outputs using simple correlations. This provides an indication of whether movement along any of the main PCA directions is associated with higher or lower performance. The correlations are treated as supporting evidence only, as PCA itself is unsupervised and the relationships between inputs and outputs may not be linear.  
+The PCA scores for each observation were then compared with the corresponding function outputs using simple correlations. This provides an indication of whether movement along any of the main PCA directions is associated with higher or lower performance. The correlations are treated as supporting evidence only, as PCA itself is unsupervised and the relationships between inputs and outputs may not be linear. The correlations were also interpreted cautiously given the relatively small and adaptively sampled datasets.  
 
 For each function, the analysis therefore records:  
 - the dimensions contributing most strongly to the main principal components;  
@@ -5533,19 +5533,19 @@ For functions where PCA identified a meaningful performance direction, this info
 
 F1: The model-independent search selected [0.585780, 0.301450], which is 0.233 from the nearest previous observation. Given the continuing GP failure and lack of useful PCA evidence, this is a reasonable exploratory candidate.  
 
-F2: The NN-led search selected [0.708357, 0.238021]. The NN predicts 0.695, reasonably close to the current best of 0.747, while maintaining a useful distance of 0.051. This looks considerably more attractive than the PCA candidates and is currently a strong option.  
+F2: The NN-led search selected [0.708357, 0.238021]. The NN predicts 0.695, reasonably close to the current best of 0.747, while maintaining a useful distance of 0.051. This is more attractive than the PCA-guided candidates and provides a strong option for final selection. 
 
-F3: The balanced search selected [0.451202, 0.516398, 0.469787]. Both models predict an improvement over the current best of -0.000352, with the GP predicting 0.00777 and NN 0.00045. Although the distance is fairly small at 0.026, this is appropriate for a function that has just produced another new best through local refinement. This looks strong.  
+F3: The balanced search selected [0.451202, 0.516398, 0.469787]. Both models predict an improvement over the current best of -0.000352, with the GP predicting 0.00777 and NN 0.00045. Although the distance is fairly small at 0.026, this is appropriate for a function that has just produced another new best through local refinement. The agreement between both models provides reasonable support for continued local refinement.  
 
-F4: The selected point [0.379411, 0.353227, 0.324930, 0.420568] is supported particularly strongly by the GP, which predicts 0.789 against a current best of 0.623. The NN is more conservative at 0.402, but importantly it is nowhere near as negative as it was for the more aggressive PCA candidates. This looks like a better compromise than following PCA directly.  
+F4: The selected point [0.379411, 0.353227, 0.324930, 0.420568] is supported particularly strongly by the GP, which predicts 0.789 against a current best of 0.623. The NN is more conservative at 0.402, but importantly it is nowhere near as negative as it was for the more aggressive PCA candidates. This provides a better balance between the model predictions than following the PCA direction directly.   
 
-F5: The candidate [0.997941, 0.995996, 0.984983, 0.987126] stays very close to the known upper-boundary optimum while remaining a novel observation. Neither model predicts a new best, but that is unsurprising because [1,1,1,1] is already the best known point. This is a sensible continuation of the boundary strategy, although we should compare it with last round's boundary behaviour before finalising it.  
+F5: The candidate [0.997941, 0.995996, 0.984983, 0.987126] stays very close to the known upper-boundary optimum while remaining a novel observation. Neither model predicts a new best, but that is unsurprising because The search has already reached the extreme upper-boundary region, so the candidate focuses on fine refinement close to this area. This provides a sensible continuation of the boundary strategy, although alternative near-boundary candidates should be compared before final selection.    
 
-F6: This is where I become more cautious. The GP predicts a substantial improvement to -0.138, but the NN predicts deterioration to -0.317. The point is also relatively far from the existing observations at 0.102. That's a much more aggressive move than the PCA candidates. Given the disagreement, I would not automatically take this candidate.  
+F6: This candidate requires greater caution because the two models disagree substantially. The GP predicts a substantial improvement to -0.138, but the NN predicts deterioration to -0.317. The point is also relatively far from the existing observations at 0.102. This is also a more aggressive movement than the PCA-guided candidates. Given the model disagreement, a more conservative intermediate candidate may provide a better balance between predicted improvement and risk. 
 
-F7: Again, the models strongly disagree. The NN predicts an excellent 3.238, but the GP predicts 2.987, below the current best of 3.070. At 0.093 from previous observations, this is fairly exploratory. Our PCA 0.10 candidate was much more conservative and had both models around/above the current best, so I think there may be a better compromise between the two.  
+F7: The models again show substantial disagreement. The NN predicts an excellent 3.238, but the GP predicts 2.987, below the current best of 3.070. At 0.093 from previous observations, this is fairly exploratory. The PCA 0.10 candidate was considerably more conservative and had both models predicting performance around or above the current best. An intermediate candidate may therefore provide a better compromise between the two approaches.  
 
-F8: This is the most aggressive selection. The NN predicts 10.212, which is very attractive, but the GP has fallen to 9.933 and the point is a substantial 0.181 from previous observations. Given that the PCA 0.10–0.30 candidates already gave us controlled movements with distances of only 0.030–0.090, I wouldn't jump this far solely because of the NN prediction.  
+F8: This represents the most aggressive candidate movement of the eight functions. The NN predicts 10.212, which is very attractive, but the GP has fallen to 9.933 and the point is a substantial 0.181 from previous observations. Given that the PCA 0.10–0.30 candidates provide more controlled movements with distances of approximately 0.030–0.090, the NN prediction alone does not provide sufficient evidence to justify such a large movement.  
 
 **Step 11. Final targeted candidate comparison**
 
@@ -5574,7 +5574,7 @@ F3–F5 remained relatively close to known high-performing regions, reflecting t
 F6–F8 maintained greater distance from previous observations, reflecting the additional influence of PCA and the aim of exploring promising new directions.  
 The validated candidates were therefore selected as the final Round 13 submissions.  
 
-
+Overall, this round showed that PCA was most useful as an additional source of evidence rather than as a standalone optimisation method. It provided particularly useful guidance for F5–F8, while adding little for F1 and F3. Combining PCA with realised model accuracy, GP uncertainty, NN validation and candidate novelty allowed the final selections to remain function-specific while becoming increasingly focused on exploitation as the query budget reduces.  
 
 
 
