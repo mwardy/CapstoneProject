@@ -5580,37 +5580,43 @@ Overall, this round showed that PCA was most useful as an additional source of e
 
 **Methodology**
 
-For the final round of the BBO capstone project, I will build on the methods developed over the previous 12 weeks, using the accumulated observations and model evaluations to select one final query for each of the eight functions. As this is the last opportunity to improve the results, the strategy will place greater emphasis on exploiting established high-performing regions, while retaining some exploration where the available evidence remains unreliable. Rather than introducing entirely new models, I will focus on refining the existing function-specific approach and using previous results to make the most informed final selections possible.  
+For the final week of the BBO capstone, I used the results and methods developed over the previous 12 weeks to select the last set of points for the eight black-box functions. With only one evaluation remaining for each function, I focused mainly on improving the best results already found rather than exploring new areas of the search space.  
+I started by reviewing the latest outputs and checking how accurately the Gaussian Process (GP) and neural network (NN) models had predicted them. Both models were then updated using the additional observations, and cross-validation was used to compare their performance. I also reviewed the optimisation history, PCA, K-Means clustering and nearby observations to understand which regions were worth investigating further.  
+New candidate points were generated using local searches, PCA-guided refinement and boundary searches where appropriate. These were compared using GP and NN predictions, uncertainty, model disagreement and distance from previous observations. Before making the final selections, I also calculated Probability of Improvement (PI) and Expected Improvement (EI) to check whether any alternative candidates offered a better opportunity for improvement.  
+Finally, I reviewed the overall progress made throughout the project and considered how the decisions related to the exploration–exploitation trade-off and reinforcement learning concepts covered in Module 24.  
 
 Step 1 – Incorporate and assess the latest results  
-- Add the new observations to each function's dataset and compare the outputs with the previous best values. Identify which functions improved and where the latest candidates underperformed.  
+I added the latest observations to each function's dataset and compared the new outputs with the previous best results. This helped identify where the previous round had been successful and where further improvement was proving difficult.  
 
 Step 2 – Review realised model prediction accuracy  
-- Compare the new outputs with the GP and NN predictions recorded before submission. Use the prediction errors and previous validation results to determine which model is currently more reliable for each function.  
+I compared the actual outputs with the GP and NN predictions made before the previous submission. Absolute prediction errors were calculated to assess which model had been more accurate for each function.
 
 Step 3 – Update model diagnostics and validation  
-- Refit the GP models using the expanded datasets and review their fitted kernels, length scales and any warnings. Repeat NN validation to assess whether its performance remains reliable.  
+I refitted the GP and NN models using the expanded datasets. I reviewed the GP kernel parameters and fitting warnings, then used five-fold cross-validation to compare the models' predictive accuracy using mean absolute error on standardised outputs.  
 
 Step 4 – Review optimisation progress  
-- Examine how recently each function has improved and whether local refinement is still producing better results. Identify functions where progress is slowing and those with established high-performing regions.  
+I examined the best output for each function, when it was achieved and how many observations had passed without further improvement. I also reviewed the five most recent outputs to assess whether the searches were still producing competitive results.  
 
 Step 5 – Review PCA, clustering and neighbourhood evidence  
-- Revisit the PCA and K-Means results from previous weeks to identify promising regions and directions. Compare these findings with the performance of nearby observations to assess whether they provide useful guidance for the final queries.  
+I repeated the PCA and K-Means analyses using the updated datasets. I examined correlations between principal components and outputs, compared clustering results using silhouette scores, and assessed the five nearest observations to each function's best point.  
 
 Step 6 – Adjust the exploration–exploitation balance  
-- Place greater emphasis on exploiting known high-performing regions, as this is the final round of queries. Retain some exploration where the models remain unreliable or where there is limited evidence of a promising region.  
+I used the previous results to decide how much exploration or exploitation was appropriate for each function. As this was the final round, I generally prioritised local refinement, while allowing some wider exploration for functions where the models had provided little useful guidance.  
 
 Step 7 – Generate function-specific candidates  
-- Generate candidates using GP and NN predictions, focusing on local refinement around the strongest observations. Use PCA-guided searches, boundary refinement or wider exploration where appropriate for each function.  
+I generated candidate points around the five best observations for each function, using several search radii. PCA-guided candidates were added where useful, alongside boundary refinement for F5 and wider exploration for F1. Points too close to existing observations were excluded before evaluating the remaining candidates with the GP and NN models.  
 
 Step 8 – Evaluate and compare candidates  
-- Compare candidates using GP predictions, uncertainty, NN predictions, previous model accuracy, PCA evidence and distance from existing observations. Consider whether candidates are supported by multiple methods and whether they offer a reasonable chance of improving the current best.  
+I compared candidates using weighted GP and NN predictions, with the weights informed by previous model performance. For each function, I shortlisted candidates based on the highest weighted prediction, highest GP prediction, highest NN prediction and strongest model agreement among the better-ranked candidates.  
 
-Step 9 – Assess model disagreement and select final candidates  
-- Where GP and NN predictions disagree, treat this as additional uncertainty and consider more conservative candidates rather than automatically selecting the most optimistic prediction. Select one final point for each function and validate its dimensions, input bounds and uniqueness before submission.  
+Step 9 – Select and validate the final candidates  
+I compared the shortlisted candidates, considering their predicted outputs, GP uncertainty, model disagreement and proximity to previous observations. I then selected one point per function and checked that each had the correct number of dimensions, fell within the permitted input bounds and had not already been evaluated.  
 
-Step 10 – Reflect on the overall optimisation strategy  
-- Review how the approach has developed over the 13 weeks and which methods have been most effective. Relate the exploration–exploitation decisions to reinforcement-learning concepts from Module 24 and consider how additional models or further observations could improve the approach in future.  
+Step 9b – Final check using PI and EI  
+Before confirming the selections, I calculated PI, EI and a conservative GP prediction score for the generated candidates. I compared the highest-ranked alternatives with the points selected in Step 9, paying particular attention to cases where high EI was driven by uncertainty or where the GP and NN disagreed. This led to a change in the final F1 candidate, while the other seven selections were retained.  
+
+Step 10 – Final performance evaluation  
+I compared the best outputs achieved throughout the project with the initial observations, calculated the improvements and identified when new best results were found. I then reflected on which methods had been most useful, the limitations of the models and how the overall approach related to sequential decision-making and the exploration–exploitation trade-off.  
 
 **Step 1. Incorporate and assess the latest results**
 
@@ -5686,15 +5692,261 @@ The NN was more accurate for four functions (F2, F3, F4 and F6), while the GP pe
 
 **Step 3. Update model diagnostics and validation**
 
+The Gaussian Process and Neural Network models were updated using the expanded datasets, including the latest Round 13 observations. The GP models were refitted using a Matérn kernel, with their fitted length scales, noise levels and convergence warnings examined to identify potential modelling issues. Five-fold cross-validation was then used to assess the predictive accuracy of both models, calculating the Mean Absolute Error on standardised outputs to allow a consistent comparison within each function. The NN models were also refitted using all available observations. This analysis aimed to identify which models were providing the most reliable predictions and whether their performance had changed following the latest observations, helping to guide the final candidate selection.  
+
+Results:
+F1: GP MAE: 0.5204; NN MAE: 0.8246. GP performed better. One length scale reached the upper bound (1,000), while noise reached the lower bound (1e-08).  
+F2: GP MAE: 0.6073; NN MAE: 0.6159. GP performed marginally better. The second dimension's length scale reached the upper bound.  
+F3: GP MAE: 0.4965; NN MAE: 0.5004. GP performed marginally better. The first dimension's length scale reached the upper bound.  
+F4: GP MAE: 0.1486; NN MAE: 0.1977. GP performed better, with no fitting warnings.  
+F5: GP MAE: 0.1507; NN MAE: 0.1422. NN performed slightly better. The fourth dimension's length scale reached the upper bound.  
+F6: GP MAE: 0.3412; NN MAE: 0.3575. GP performed slightly better, with no fitting warnings.  
+F7: GP MAE: 0.2809; NN MAE: 0.3462. GP performed better. The third dimension's length scale reached the upper bound, while noise reached the lower bound.  
+F8: GP MAE: 0.0766; NN MAE: 0.2796. GP performed considerably better. The eighth dimension's length scale reached the upper bound.  
+Overall: The GP achieved lower cross-validation errors for seven of the eight functions, with the NN performing slightly better only for F5.  
+
+The GP generally performed better during cross-validation, particularly for F4, F7 and F8. F8 showed the strongest GP validation performance, with an MAE of just 0.0766 compared with 0.2796 for the NN. This is consistent with Step 2, where the GP also predicted the latest F8 output considerably more accurately. F7 showed a similar pattern, supporting greater reliance on GP predictions for these two functions.  
+For F2 and F3, the GP achieved slightly lower validation errors, although the differences were very small. The NN was substantially more accurate when predicting the latest F2 output, suggesting that neither model should be prioritised solely on cross-validation results. F4 also requires caution: despite relatively good validation performance, both models substantially overestimated the latest output. This highlights the difference between average validation accuracy and reliability at a particular candidate location.  
+F5 was the only function where the NN performed better during cross-validation, although the GP was more accurate in the latest realised prediction. Both models therefore remain useful for evaluating boundary refinements. F6 also showed relatively similar validation performance, suggesting that comparing predictions from both models remains worthwhile.  
+Several GP models produced warnings where individual length scales reached their upper bounds. This suggests that the models found relatively little variation along those dimensions within the observed data, although it does not necessarily mean those inputs are unimportant to the underlying functions. F1 continues to be particularly challenging, with relatively high validation errors and little evidence of a reliable high-performing region.  
+Overall, the results support retaining both models but placing greater emphasis on the GP for F7 and F8. For the remaining functions, model selection should continue to consider realised prediction accuracy, cross-validation and previous observations together, rather than relying on any single measure.  
+
+**Step 4. Review optimisation progress**
+
+The optimisation history of each function was examined to assess how effectively the search had progressed over the previous rounds. For each function, I identified the current best output, when it was first achieved and how many observations had been made since that improvement. I also examined the results of the five most recent observations to determine whether the search was continuing to find promising regions or whether progress had slowed. This helped distinguish functions where local refinement was still producing competitive results from those where the current approach appeared less effective. As this is the final round, these findings will help determine how strongly to focus on exploiting the best-known regions.  
+
+Results:
+F1: The best output remained approximately zero, first achieved at observation 3. No improvements were recorded over the latest 19 observations, with all five recent outputs also approximately zero.  
+F2: The best output was 0.746962, achieved at observation 15. Seven observations have passed since, and the best of the latest five outputs was 0.682038, around 0.064925 below the overall best.  
+F3: The best output was -0.000352, achieved at observation 26. This was the most recent improvement, with the latest output (-0.006038) remaining relatively close to the best.  
+F4: The best output was 0.622950, achieved at observation 40. Two observations have passed since, and the latest five included another strong result of 0.583730, although the most recent output was considerably lower at 0.061505.  
+F5: The best output was 8,662.483, achieved at observation 27. Five observations have passed since, and the best of the latest five was 8,119.408, approximately 543.075 below the overall best.  
+F6: The best output was -0.239769, achieved at observation 29. Three observations have passed since, and the latest five included several weaker outputs, with the most recent reaching -0.305529.  
+F7: The best output was 3.070097, achieved at observation 41. The latest output was 2.951245, while the best of the latest five remained the overall best.  
+F8: The best output was 9.987419, achieved at observation 51. The latest output was 9.983162, remaining close to the best, with the most recent five showing consistently strong results.  
+
+The optimisation history suggests that progress has slowed for several functions, although the extent of this varies. F1 appears to have stagnated, with no meaningful improvements over the latest 19 observations and outputs remaining approximately zero. F2 and F5 have also gone several observations without improving, with their recent bests falling below their previous records. This suggests that further refinement should be focused carefully around established high-performing regions rather than assuming recent candidate movements will produce improvements.  
+F3, F4, F7 and F8 have shown more recent progress, with their current best outputs achieved within the last three observations. F4 is particularly interesting because the latest five observations included a result close to its overall best, suggesting that the search is still finding promising regions, despite the latest output being weaker. F7 and F8 also continue to produce outputs close to their current bests, supporting further local refinement.  
+F6 has not improved for three observations, and its recent outputs have generally been weaker than its best result. Overall, these findings suggest a more exploitation-focused final round, concentrating on local refinement for functions with recent strong results, while being more cautious for functions where progress has slowed or recent outputs have consistently underperformed.  
+
+**Step 5. Review PCA, clustering and neighbourhood evidence**
+
+The PCA, K-Means clustering and neighbourhood analyses from previous rounds were revisited using the updated datasets, including the latest observations. PCA was applied to the standardised inputs to identify directions associated with stronger outputs, comparing the positions of the highest-performing observations with the overall distribution. K-Means clustering was then used to identify groups of similar observations, testing between two and four clusters and selecting the best result using silhouette scores. Finally, the five nearest observations to each function's current best were examined to assess whether strong performance was supported by nearby points. Combining these methods helped determine which high-performing regions had consistent supporting evidence and where further local refinement might be worthwhile.  
+
+Resluts:
+F1: Very weak PCA correlation (PC1: -0.0450). Best cluster silhouette: 0.3968. Five nearest neighbours averaged -0.000721, providing limited evidence of a promising region.  
+F2: Moderate PCA correlation (PC2: -0.5957). Strong clustering structure (silhouette: 0.6602). Best observation's cluster averaged 0.5994, while five nearest neighbours averaged 0.5618.  
+F3: Weak PCA correlation (PC3: -0.3248). Clustering silhouette: 0.3440. Five nearest neighbours averaged -0.007774, with the strongest reaching -0.000863.  
+F4: Moderate PCA correlation (PC1: -0.6546). Clustering silhouette: 0.3246. Five nearest neighbours averaged 0.2929, with the strongest reaching 0.5837.  
+F5: Very strong PCA correlation (PC1: +0.9116). Clustering silhouette: 0.4682. Five nearest neighbours averaged 8,098.76, compared with the best output of 8,662.48.  
+F6: Strong PCA correlation (PC1: -0.7575). Weak clustering structure (silhouette: 0.2756). Five nearest neighbours averaged -0.3012, relatively close to the best of -0.2398.  
+F7: Moderate PCA correlation (PC1: -0.6221). Weak clustering structure (silhouette: 0.2913). Five nearest neighbours averaged 2.9333, with the strongest reaching 3.0246.  
+F8: Very strong PCA correlation (PC1: -0.9177). Weak clustering structure (silhouette: 0.2053). Five nearest neighbours averaged 9.9633, close to the best of 9.9874.  
+
+The results show that PCA provides useful directional evidence for several functions, particularly F5, F6 and F8. F5 has a very strong positive correlation between PC1 and output, with the highest-performing observations concentrated towards the same end of the component. This supports the previous finding that high input values are associated with stronger performance. However, the five nearest neighbours to the current best all produced noticeably lower outputs, suggesting that small movements away from the strongest boundary point may reduce performance.  
+F8 also shows a particularly strong PCA relationship, with a PC1 correlation of -0.9177. Its five nearest neighbours produced consistently high outputs, averaging 9.9633 compared with the best of 9.9874. This provides strong support for continued local refinement, although the weak clustering structure suggests that PCA and GP predictions may be more useful than K-Means for identifying final candidates.  
+F6 and F7 show moderately strong negative PCA correlations, with their best observations positioned in similar PCA regions to other high-performing points. Their nearest neighbours also produced relatively competitive outputs, suggesting that targeted local searches could remain worthwhile. However, the relatively low silhouette scores indicate that the clusters are not particularly well separated.  
+F2 has the clearest clustering structure, with a silhouette score of 0.6602, suggesting that its observations form relatively distinct groups. The cluster containing the best observation also has a reasonably strong average output, supporting further refinement within this region. F3 and F4 show weaker clustering patterns, although their nearest neighbours include some strong observations. F4 is particularly interesting because one nearby observation reached 0.5837, close to the current best of 0.6229, despite the latest query performing poorly.  
+F1 continues to provide little useful directional evidence, with almost no correlation between PCA components and output. Overall, the findings support using PCA and neighbourhood evidence to guide targeted refinement for F2–F8, while placing less emphasis on clustering where the groups are poorly separated. For the final round, these findings should be combined with GP and NN predictions rather than used independently to select candidates.  
+
+**Step 6. Adjust the exploration–exploitation balance**
+
+The exploration–exploitation balance was reviewed separately for each function using the results from the previous steps. The number of observations since the current best was identified, while the differences between recent outputs, neighbouring observations and the best result were normalised against each function's observed output range. This allowed recent performance and local consistency to be assessed without differences in output scale affecting the comparison. GP and NN cross-validation results were also considered alongside realised prediction accuracy and previous PCA findings. As this was the final round, the strategy was adjusted to prioritise exploitation of established high-performing regions, while retaining limited exploration where the available evidence remained unreliable.  
+
+Results  
+- F1: No improvement for 19 observations. Recent gap: 0.0000; neighbour gap: 0.1220. GP performed better in validation. Proposed strategy: limited model-independent exploration.  
+- F2: No improvement for 7 observations. Recent gap: 0.0783; neighbour gap: 0.2234. GP marginally better in validation, but NN more accurate in the latest prediction. Proposed strategy: NN-supported local refinement.  
+- F3: Best achieved one observation ago. Recent gap: 0.0000; neighbour gap: 0.0186. GP marginally better in validation. Proposed strategy: conservative local refinement.  
+- F4: Best achieved two observations ago. Recent gap: 0.0000; neighbour gap: 0.0099. GP performed better in validation. Proposed strategy: cautious local refinement around the best observations.  
+- F5: No improvement for 5 observations. Recent gap: 0.0627; neighbour gap: 0.0651. NN slightly better in validation. Proposed strategy: targeted boundary exploitation.  
+- F6: Best achieved three observations ago. Recent gap: 0.0000; neighbour gap: 0.0254. GP slightly better in validation. Proposed strategy: GP–NN comparison with PCA-guided refinement.  
+- F7: Best achieved one observation ago. Recent gap: 0.0000; neighbour gap: 0.0446. GP performed better in validation. Proposed strategy: GP-led local refinement.  
+- F8: Best achieved one observation ago. Recent gap: 0.0000; neighbour gap: 0.0055. GP performed considerably better in validation. Proposed strategy: GP-led local refinement with PCA support.  
+
+The assessment supports a greater emphasis on exploitation for the final round, although the most appropriate approach differs between functions. F3, F4, F7 and F8 have achieved their best outputs relatively recently, with small normalised gaps between their strongest observations and nearby results. This suggests that further local refinement remains worthwhile, particularly for F8, where the neighbour gap of just 0.0055 indicates consistently strong performance around the current best. The GP's strong validation performance and recent prediction accuracy also support using it as the primary model for F7 and F8.  
+F2 and F5 have gone longer without improvement. F2 has a relatively large neighbour gap of 0.2234, suggesting that performance varies considerably even close to its best observation. Although the GP performed marginally better during cross-validation, the NN was substantially more accurate in the latest round, supporting NN-guided refinement while retaining GP predictions as a comparison. For F5, the previous best remains noticeably stronger than recent nearby observations. Combined with the strong PCA relationship identified earlier, this supports focusing on the highest-performing boundary region rather than exploring substantially different areas.  
+F6 shows reasonable local consistency, with a neighbour gap of 0.0254, and its PCA results suggest potentially useful refinement directions. However, the GP and NN have shown different strengths across validation and realised predictions, so comparing both models remains appropriate. F4 also requires caution despite its small neighbour gap, as both models substantially overestimated the latest output.  
+F1 remains the most difficult function to optimise. Although the normalised recent gap is zero, this reflects the extremely small outputs rather than evidence of continued improvement. With no meaningful progress for 19 observations and weak PCA relationships, there is limited justification for relying entirely on local refinement. A small amount of model-independent exploration therefore remains appropriate.  
+Overall, the final strategy will prioritise local exploitation for F2–F8, using model predictions and previous observations to guide candidate selection. F1 will retain a more exploratory approach because the existing models have not identified a consistently promising region.
+
+**Step 7. Generate function-specific candidates**
+
+Candidate points were generated separately for each function using the strategies established in Step 6. Local searches were carried out around the five highest-performing observations, using different search radii to identify promising adjustments. PCA-guided candidates were also generated for functions where previous analysis had identified useful relationships between principal components and output. F5 received additional boundary-focused searches, while F1 included wider model-independent exploration due to its continued lack of improvement. Candidates too close to existing observations were excluded, and the remaining points were evaluated using GP predictions, GP uncertainty and NN predictions. The highest-predicted candidates from each model were then identified for further comparison before selecting the final queries.  
+
+Results:
+- F1: 15,483 candidates generated. Best GP candidate: [0.348077, 0.432528], predicted output 0.000307. Best NN candidate: [0.640774, 1.000000], predicted output 0.001438. Both predictions were extremely small.  
+- F2: 15,581 candidates generated. Best GP prediction: 0.6303 at [0.701257, 0.108964]. Best NN prediction: 0.6598 at [0.706984, 0.286786]. Both candidates came from local refinement and remained below the observed best of 0.7470.  
+- F3: 14,794 candidates generated. Best GP prediction: 0.0110, although the NN predicted -0.0386 for the same point. Best NN candidate predicted -0.0033, with much closer agreement between the models.  
+- F4: 15,937 candidates generated. Best GP prediction: 0.4871, compared with 0.2977 from the NN. Best NN prediction: 0.9021, compared with just 0.2854 from the GP.  
+- F5: 19,663 candidates generated. Both models selected [1.000000, 1.000000, 1.000000, 0.994987] as their highest-ranked candidate. GP prediction: 8,328.74; NN prediction: 7,910.91. Both remained below the observed best of 8,662.48.  
+- F6: 15,980 candidates generated. Best GP candidate predicted -0.2494, while the NN predicted -0.2644. Best NN candidate came from PCA-guided refinement, predicting -0.2477 compared with -0.2672 from the GP.  
+- F7: 15,996 candidates generated. Best GP prediction: 3.1901, compared with 2.4543 from the NN. Best NN prediction: 3.0852, compared with 2.3434 from the GP. Both models identified potentially strong candidates but disagreed considerably.  
+- F8: 16,000 candidates generated. Best GP prediction: 9.9976, compared with 9.9186 from the NN. Best NN prediction: 10.3201, compared with 9.9083 from the GP. The GP candidate was considerably closer to previous observations.  
+
+The candidate-generation process identified several promising opportunities, although the level of agreement between the GP and NN models varied considerably. F2, F3 and F6 produced candidates where the models showed relatively close agreement, particularly for the NN-selected F3 candidate and both F6 candidates. However, most predicted outputs remained below the existing best observations, suggesting that the final round should focus on carefully refining established high-performing regions rather than making substantial changes.  
+F4 and F7 showed particularly large disagreements between the models. For F4, the NN predicted an output of 0.9021 for its preferred candidate, substantially above the current best of 0.6229, while the GP predicted only 0.2854. A similar pattern appeared for F7, where the GP and NN each identified promising candidates that the other model rated considerably lower. Given the prediction errors observed in Step 2, these differences suggest that selecting the most optimistic candidate from either model would carry additional risk.  
+F5 produced an interesting result, with both models identifying the same candidate close to the upper boundary. However, neither predicted an improvement over the current best of 8,662.48. This supports the previous evidence that the strongest boundary point may already be difficult to improve upon, and that even small movements away from it can reduce performance.  
+F8 appears more promising, with the GP identifying a candidate predicted to slightly exceed the current best of 9.9874. This is particularly relevant given the GP's strong cross-validation performance and accurate prediction in the previous round. The NN's preferred candidate offered a much higher predicted output, but its greater distance from existing observations and disagreement with the GP make it a riskier option.  
+F1 remains challenging, with both models predicting outputs extremely close to zero. Although the GP and NN identified different preferred locations, neither provided convincing evidence of a meaningful improvement. Continued limited exploration therefore remains reasonable.  
+Overall, the results support using a cautious, function-specific approach during the final selection process. Greater weight should be placed on candidates supported by both models and previous observations, while more aggressive predictions should be assessed carefully before submission. The next step will compare these candidates using model reliability, uncertainty and distance from existing observations to identify the strongest final options.  
+
+**Step 8. Evaluate and compare candidates**
+
+The candidates generated in Step 7 were compared using weighted GP and NN predictions, with the weights adjusted according to each model's previous performance. The analysis also considered GP uncertainty, disagreement between the models, distance from existing observations and predicted improvement over the best recorded output. Four candidates were shortlisted for each function: the highest weighted prediction, the highest GP prediction, the highest NN prediction and the strongest model agreement among the top 10% of weighted predictions. This allowed potentially high-performing candidates to be compared against more conservative alternatives before making the final selections.  
+
+Results  
+- F1: Highest weighted prediction of 0.000431, but the models disagreed and the GP predicted almost zero. The strongest agreement candidate also predicted approximately zero. Neither offered convincing evidence of meaningful improvement.  
+- F2: Highest weighted prediction of 0.6471, below the current best of 0.7470. GP and NN predictions were relatively close (0.6286 and 0.6595), with moderate GP uncertainty of 0.0720.  
+- F3: Highest weighted prediction of -0.00346, below the current best of -0.000352. Model disagreement was small (0.00249), with low GP uncertainty of 0.00637. The GP's individually preferred candidate showed considerably greater disagreement.  
+- F4: Highest weighted prediction of 0.5452, below the current best of 0.6229. Model disagreement remained substantial at 0.4266, with GP uncertainty of 0.1918. The agreement candidate produced a lower prediction of 0.4685.  
+- F5: All three prediction-based rankings selected the same boundary candidate, with a weighted prediction of 8,161.61, approximately 501 below the current best. Model disagreement remained substantial at 417.83, alongside GP uncertainty of 256.33.  
+- F6: Highest weighted prediction of -0.2530, slightly below the current best of -0.2398. GP and NN predictions were almost identical, differing by just 0.00110, with GP uncertainty of 0.0342.  
+- F7: Highest weighted prediction of 3.0573, slightly below the current best of 3.0701. The models disagreed by 0.2784, although GP uncertainty was relatively low at 0.0298. The agreement candidate predicted 2.9948.  
+- F8: Highest weighted prediction of 10.0106, exceeding the current best of 9.9874, but model disagreement was substantial at 0.3241. The agreement candidate predicted 9.9916, also above the current best, with extremely low disagreement and GP uncertainty of just 0.00128.  
+
+The comparison suggests that several functions have promising refinement opportunities, although most shortlisted candidates are predicted to perform slightly below the best outputs already observed. This is particularly apparent for F2, F3 and F6, where both models generally agree on the performance of candidates near established high-performing regions. While these candidates do not offer clear predicted improvements, their relatively consistent predictions provide a more reliable basis for final selection than the more optimistic alternatives identified elsewhere.  
+F4 and F5 remain challenging. F4 continues to show substantial disagreement between the GP and NN, making the highest weighted prediction less convincing despite its proximity to strong previous observations. The agreement candidate may therefore warrant greater consideration. For F5, both models favour the same boundary candidate, but predict a considerable reduction from the best recorded output. This reinforces the importance of the upper boundary while suggesting that the models have difficulty reproducing the unusually strong result achieved at the exact boundary.  
+F7 presents a trade-off between predicted performance and model agreement. The highest weighted candidate is close to the existing best and receives a relatively strong GP prediction, but the NN is less optimistic. The agreement candidate is more conservative, with both models predicting approximately 2.995. Given the GP's stronger historical performance, the higher-ranked candidate remains worth considering, although the disagreement introduces uncertainty.  
+F8 offers the clearest potential improvement. Its highest weighted candidate predicts 10.0106, but this result is driven partly by a much more optimistic NN prediction. More importantly, the agreement candidate predicts 9.9916, slightly above the existing best, with exceptionally close agreement between the models and very low GP uncertainty. This makes it a particularly strong option for the final round, especially given the GP's previous accuracy on this function.  
+F1 continues to show limited evidence of improvement, with predicted outputs extremely close to zero and no consistent agreement on a promising region. The final selection may therefore benefit from retaining a model-independent component rather than relying solely on the highest predicted output.  
+Overall, the analysis supports prioritising candidates with a combination of strong predicted performance, model agreement and reasonable proximity to previous observations. F8 stands out as the most promising opportunity for improvement, while F2, F3 and F6 offer comparatively stable refinement options. F4, F5 and F7 require more careful judgement because of model disagreement or the difficulty of improving upon their existing best outputs.
+
+**Step 9. Assess model disagreement and select final candidates**
+
+The shortlisted candidates from Step 8 were compared to select one final query for each function. Selection was based on weighted GP and NN predictions, model disagreement, GP uncertainty, distance from previous observations and historical model reliability. Candidates with strong agreement were generally preferred where predictions differed substantially, while greater emphasis was placed on the better-performing model where appropriate. Each selected point was rounded to six decimal places and checked against the permitted input boundaries, expected dimensionality and previous observations to ensure it was valid and had not already been evaluated.  
+
+Initial assessment:  
+- F1: Retain an exploratory candidate, as neither model provides convincing evidence of improvement.  
+- F2: Prioritise the weighted candidate, supported by relatively close GP and NN predictions.  
+- F3: Prioritise local refinement, avoiding the GP's more optimistic but poorly supported candidate.  
+- F4: Consider the agreement candidate over the weighted candidate because of substantial model disagreement.  
+- F5: Prioritise the boundary candidate selected by both models.  
+- F6: Prioritise the weighted candidate, which has exceptionally close model agreement.  
+- F7: Consider the weighted candidate, giving greater importance to the GP's stronger historical performance.  
+- F8: Prioritise the agreement candidate, which offers a small predicted improvement with low uncertainty.  
+
+Results  
+- F1: Selected [0.970964, 0.144749] using model agreement. Predicted output: -0.000016. Both models agreed closely, although neither predicted a meaningful improvement. Validation passed.  
+- F2: Selected [0.705356, 0.289644] using the highest weighted prediction of 0.6471. Model disagreement was relatively small (0.0309), but the prediction remained below the current best of 0.7470. Validation passed.  
+- F3: Selected [0.453820, 0.535334, 0.457166]. Weighted prediction: -0.003461, with low model disagreement of 0.00249. The point remained close to the strongest existing observations. Validation passed.  
+- F4: Selected [0.378667, 0.370356, 0.358613, 0.401134] using model agreement. Weighted prediction: 0.4685, with disagreement of just 0.00105, although GP uncertainty remained relatively high at 0.2104. Validation passed.  
+- F5: Selected [1.000000, 1.000000, 1.000000, 0.994987]. Both models ranked this boundary candidate highest. Weighted prediction: 8,161.61, below the current best of 8,662.48. Validation passed.  
+- F6: Selected [0.427111, 0.396525, 0.553035, 0.815857, 0.000000]. Weighted prediction: -0.2530, with very close GP and NN agreement (0.00110). Validation passed.  
+- F7: Selected [0.134543, 0.252076, 0.500741, 0.287015, 0.329668, 0.686644]. Weighted prediction: 3.0573, slightly below the current best of 3.0701. GP uncertainty was relatively low at 0.0298, although model disagreement remained noticeable. Validation passed.  
+- F8: Selected [0.041810, 0.135867, 0.145837, 0.154986, 0.783138, 0.496861, 0.183924, 0.693244]. Weighted prediction: 9.9916, slightly above the current best of 9.9874. Model disagreement was exceptionally small (0.000017), alongside GP uncertainty of 0.00128. Validation passed.  
+
+
+All eight selected candidates passed the validation checks, confirming that their dimensions and input values were correct and that none duplicated a previous observation.  
+F2, F3 and F6 represent relatively conservative exploitation strategies, with candidates located near previously successful observations and supported by reasonable agreement between the GP and NN models. Although their weighted predictions remain below the existing best outputs, they offer opportunities for further local refinement without relying on substantial extrapolation.  
+F4 and F7 required greater consideration of model disagreement. For F4, the agreement candidate was preferred over the more optimistic weighted candidate because the models had previously produced substantial prediction errors. This reduced reliance on an unusually high NN prediction, although the GP uncertainty indicates that the outcome remains difficult to predict. For F7, the weighted candidate was retained because of the GP's stronger historical performance and its relatively favourable prediction, despite the NN being less optimistic.  
+F5 continued to favour the upper boundary, with both models selecting the same candidate. However, its predicted output remained considerably below the best observation, suggesting that the exceptionally strong result at the exact boundary may be difficult to reproduce at nearby points.  
+F8 appears to offer the strongest opportunity for improvement. The selected candidate is predicted to exceed the current best slightly, with exceptionally close agreement between the GP and NN models and very low GP uncertainty. This provides a stronger basis for selection than the more optimistic alternatives that relied heavily on NN predictions.  
+F1 remains the least certain selection. The chosen candidate has excellent model agreement and is reasonably distant from previous observations, but both models predict an output slightly below zero. Given that the best observed output is already effectively zero, this is not evidence of a likely improvement. The candidate therefore represents a cautious exploratory choice rather than a confidently predicted improvement.  
+Overall, the final selections reflect the shift towards exploitation established in Step 6, while accounting for differences in model reliability and local performance across the eight functions.  
+
+**Step 9b. Final optimisation check using PI and EI**
+
+The final candidates were reassessed using Probability of Improvement, Expected Improvement and a conservative prediction score calculated from the GP's predicted mean and uncertainty. These measures were compared against the candidates selected in Step 9 to determine whether alternative points offered stronger opportunities for improvement. Particular attention was given to cases where higher EI resulted from greater uncertainty rather than stronger predicted performance. GP and NN predictions were also compared to identify potentially unreliable model estimates. As this was the final round, the assessment prioritised the likelihood and potential magnitude of improvement rather than the information gained through further exploration.  
+
+Results  
+- F1: Current PI was 48.5%, with EI of 0.000159. The highest-EI candidate increased EI to 0.000612, but the NN predicted a negative output. The highest-PI candidate achieved 91.9%, although the potential improvement was extremely small.  
+- F2: Current PI was just 5.0%, with EI of 0.00151. The highest-EI candidate increased EI to 0.02076, but had a lower GP prediction of 0.3946 and substantially greater uncertainty of 0.3147.  
+- F3: Current PI was 38.5%, with EI of 0.00172. The highest-EI candidate achieved PI of 86.8% and EI of 0.01199. However, the GP predicted 0.0110 while the NN predicted -0.0386, indicating considerable disagreement.  
+- F4: Current PI was 23.2%, with EI of 0.02847. The highest-EI candidate increased EI to 0.04256, but had greater uncertainty and a much lower NN prediction of 0.0597.  
+- F5: The current candidate remained the strongest under all three measures. PI was 9.6%, with EI of 11.62. No alternative offered a higher calculated EI.  
+- F6: Current PI was 35.5%, with EI of 0.00823. The highest-EI candidate increased EI to 0.01970, largely because of higher uncertainty. Its GP and NN predictions were both below those of the current candidate.  
+- F7: Current PI was 97.1%, with EI of 0.05710. The highest-EI candidate increased EI to 0.12100, with a GP prediction of 3.1901. However, the NN predicted only 2.4543, indicating substantial disagreement.  
+- F8: Current PI was 99.95%, with EI of 0.00420. The highest-EI candidate increased EI to 0.01021, with a GP prediction of 9.9976. However, the NN predicted 9.9186, compared with 9.9916 for the existing candidate.  
+
+The additional comparison highlights the limitations of selecting candidates purely according to their highest EI or PI. Several functions produced higher EI values at points where the GP was substantially more uncertain, rather than where both models predicted stronger performance. This was particularly evident for F2, F4 and F6, where the highest-EI candidates were less strongly supported by the NN or had lower predicted outputs than the existing selections.  
+F3 presented a more difficult decision. Its highest-EI candidate had a substantially higher probability of improvement than the current selection, but the GP and NN predictions differed considerably. Given that the GP had only marginally outperformed the NN during cross-validation, and the NN had been more accurate in the latest realised prediction, the optimistic GP estimate should be treated cautiously.  
+F7 showed a similar trade-off. The highest-EI candidate offered a substantially greater predicted improvement according to the GP, which had performed better historically. However, the NN predicted a considerable reduction in performance. This makes the alternative potentially attractive but higher risk than the existing selection.  
+F8 remained the strongest opportunity for a reliable improvement. Both the existing and highest-EI candidates had very high GP-estimated probabilities of improvement. Although the highest-EI candidate offered a greater predicted gain, the existing candidate had exceptionally close GP and NN agreement and lower uncertainty, supporting a more conservative selection.  
+F5 was the clearest decision, as the existing boundary candidate remained the strongest under every measure. F1 remained uncertain, with different acquisition measures favouring different candidates but all predicted improvements being extremely small.  
+
+F1	Change to PI candidate	Both models predict a small positive output, unlike the current selection.
+F2	Keep current	          Higher EI alternatives are driven by uncertainty and weaker predictions.
+F3	Keep current	          The highest-EI alternative has substantial model disagreement.
+F4	Keep current	          The agreement candidate is better supported by both models.
+F5	Keep current	          Highest-ranked candidate across all measures.
+F6	Keep current	          Strong model agreement and better predicted performance.
+F7	Keep current	          The higher-EI alternative relies heavily on an optimistic GP prediction.
+F8	Keep current          	Strong agreement, low uncertainty and a predicted improvement.
+
+**Step 10. Final Performance Evaluation**
+
+The final stage evaluated the overall performance of the Bayesian optimisation strategy across all eight black-box functions. The analysis compared the best outputs identified throughout the project with the initial observations, examined when improvements occurred and assessed how effectively the approach balanced exploration and exploitation. Particular attention was given to the Gaussian Process surrogate models, neural networks, uncertainty estimates, acquisition functions and additional techniques such as PCA and K-Means clustering.  
+
+The optimisation process was also considered in relation to reinforcement learning. Each weekly submission was treated as a decision made using the information available at that stage, while the subsequent function output provided feedback that informed later decisions. This allowed the strategy to be discussed in terms of sequential decision-making, rewards and the exploration–exploitation trade-off, without suggesting that a formal reinforcement learning algorithm had been implemented.  
+
+Results  
+The optimisation process improved the best observed output for seven of the eight functions, producing 44 new best observations beyond the initial datasets.  
+- F1: No improvement was recorded beyond the initial observations. The best output remained effectively zero, first identified at observation 3. A further 19 observations failed to improve this result, making F1 the most difficult function to optimise.  
+- F2: The best output increased from 0.6112 to 0.7470, an improvement of 22.21%. However, only one new best was recorded after the initial observations, at observation 15, with no further improvement across the final seven observations.  
+- F3: The best output improved from -0.03484 to -0.000352, representing a 98.99% reduction in the magnitude of the negative output. Six new best observations were recorded, with the strongest result achieved at observation 26.  
+- F4: The best output increased substantially from -10.0696 to 0.6229, an absolute improvement of 10.6926. Nine new best observations were recorded, with the highest output achieved at observation 40.  
+- F5: The largest relative improvement was achieved for F5, increasing from 258.37 to 8,662.48, representing growth of 3,252.74%. Nine new best observations were recorded, with the strongest result achieved at observation 27.  
+- F6: The best output improved from -0.7143 to -0.2398, reducing the magnitude of the negative output by 66.43%. Five new best observations were recorded, with the highest result achieved at observation 29.  
+- F7: The best output increased from 1.3650 to 3.0701, an improvement of 124.92%. Six new best observations were recorded, with the strongest result achieved at observation 41.  
+- F8: The best output increased from 8.6061 to 9.9874, an improvement of 16.05%. Eight new best observations were recorded, with the strongest result achieved at observation 51.  
+
+
+Analysis of results  
+The overall results demonstrated that the optimisation strategy was effective across functions with substantially different dimensionalities and output ranges. Improvements were achieved in seven of the eight functions, with particularly strong progress in F4, F5 and F7. The 44 new best observations also indicated that the approach was able to identify progressively better regions of the search space rather than relying entirely on the initial data.  
+
+The greatest improvement occurred in F5, where the optimisation process identified the upper boundary of the search space as a particularly promising region. The strong relationship observed between its principal components and function outputs also supported this direction. F4 similarly demonstrated substantial progress, moving from a strongly negative initial best to a positive output, although its later GP and NN predictions showed that accurately modelling the function remained challenging.  
+
+F3, F6, F7 and F8 also showed consistent improvements, with their best results achieved relatively late in the process. In particular, F7 and F8 achieved their strongest outputs at observations 41 and 51 respectively, demonstrating the value of continued local refinement even after substantial optimisation had already taken place. F8 also benefited from comparatively accurate GP predictions, allowing the final candidate selection to be made with greater confidence.  
+
+In contrast, F1 and F2 highlighted the limitations of the approach. F1 showed no measurable improvement beyond its initial observations, while F2 achieved only one new best result. These outcomes suggested that the surrogate models were less effective at identifying promising improvements for these functions, despite the use of different acquisition strategies and additional modelling techniques.  
+
+The comparison between GP and NN models was particularly valuable during the later stages. Although the GP generally performed better during cross-validation, the NN provided an independent estimate that helped identify potentially overoptimistic predictions. This was especially relevant for F3, F4 and F7, where the models sometimes disagreed considerably. PCA and K-Means clustering also provided useful supporting information, although their effectiveness varied depending on the underlying structure of each function.  
+
+From a reinforcement learning perspective, the project demonstrated the importance of adapting decisions based on feedback. Each observation provided new information about the unknown function, allowing subsequent decisions to balance exploration of uncertain regions with exploitation of previously successful areas. The strategy gradually placed greater emphasis on exploitation as the project approached its final submissions, reflecting the reduced value of gathering information when no further evaluations would be available.  
+
+Overall, the project demonstrated how Bayesian optimisation can be combined with additional machine learning techniques to address complex black-box problems under limited evaluation budgets. While improvements were not achieved consistently across every function, the results showed the value of sequential learning, uncertainty-aware decision-making and adapting the optimisation strategy as more information became available.  
+
+The final eight submission points were selected using the combined evidence from the GP and NN models, historical performance, model agreement and improvement-based acquisition functions. Their actual outputs remain unknown, so the performance figures above describe the completed observations rather than the expected outcomes of the final submissions.  
+
+F1  
+0.986278-0.694632  
+F2  
+0.705356-0.289644  
+F3  
+0.453820-0.535334-0.457166  
+F4  
+0.378667-0.370356-0.358613-0.401134  
+F5  
+1.000000-1.000000-1.000000-0.994987  
+F6  
+0.427111-0.396525-0.553035-0.815857-0.000000  
+F7  
+0.134543-0.252076-0.500741-0.287015-0.329668-0.686644  
+F8  
+0.041810-0.135867-0.145837-0.154986-0.783138-0.496861-0.183924-0.693244  
 
 
 
+**Final Candidate Selection – Evaluation and Considerations**  
+The final candidates were selected based on historical optimisation performance, GP and NN predictions, model agreement, uncertainty estimates and expected improvement. Rather than selecting points purely according to their highest predicted outputs, the final approach considered the reliability of each model and the behaviour observed throughout the optimisation process.  
 
+**Confidence in final selections**  
 
+F5 and F8 provided the strongest justification for their final selections. For F5, previous observations demonstrated that the upper boundary of the search space was particularly promising, with the highest output of 8,662.48 achieved at [1, 1, 1, 1]. PCA analysis also supported this direction, making further refinement close to the boundary a logical choice. For F8, the GP demonstrated strong predictive accuracy, while both the GP and NN produced almost identical predictions for the selected candidate. This agreement, combined with low GP uncertainty and a predicted improvement over the existing best, provided confidence in the final selection.  
 
+F2, F4 and F6 also followed the patterns identified during earlier rounds. F2 and F6 focused on refining promising regions rather than exploring less-established areas of the search space. F4 required a more cautious approach, as previous predictions had shown considerable errors and disagreement between the models. Selecting a candidate with closer GP and NN agreement reduced reliance on potentially overoptimistic predictions.  
 
+**Reservations and remaining uncertainty**  
 
+F1 remained the most difficult function to optimise, with no improvement recorded beyond the initial observations. Although the final candidate had a relatively high GP-estimated probability of improvement, both models predicted only a very small positive output. Given the limited success of previous modelling approaches, confidence in this prediction remained low.  
 
+F3 presented a trade-off between potential improvement and model reliability. An alternative candidate offered substantially higher GP-estimated probability and expected improvement, but the NN predicted a considerably worse outcome. As the NN had performed better on the latest realised observation, the more conservative candidate was retained to reduce reliance on a potentially overoptimistic GP prediction.  
+
+F7 presented a similar challenge. The GP predicted an improvement over the current best, while the NN was less optimistic. Although alternative candidates offered higher expected improvement, they also showed greater disagreement between the models. The selected point therefore represented a compromise between potential improvement and prediction reliability.  
+
+**Overall assessment**  
+
+The final selections reflected the lessons learned throughout the optimisation process, particularly the importance of adapting the strategy to each function rather than applying a single approach across all eight. While some uncertainty remained, especially for F1, F3 and F7, the selected candidates offered a reasonable balance between predicted improvement, model reliability and historical performance. Given that seven of the eight functions had improved during the project, the overall approach demonstrated the value of combining Bayesian optimisation with additional machine learning techniques and using feedback to refine decisions over time.  
 
 
 
@@ -5718,3 +5970,4 @@ Week 9: Introduce multi-radius local refinement around established high-performi
 Week 10: Evaluate the realised accuracy of the previous round's GP and NN predictions, update model diagnostics and NN validation, and use this evidence to refine the function-specific strategy. Local searches, novelty constraints and model-independent exploration are then used selectively rather than applying a single optimisation method across all functions.  
 Week 11: Introduce K-Means clustering to identify broader high-performing regions within each function’s search space and assess how meaningful those regions are using silhouette scores and cluster performance. Combine this new regional evidence with GP and NN predictions, realised model accuracy, local refinement and novelty to generate and compare function-specific candidates before final selection.  
 Week 12: Introduce PCA to identify the main directions of variation within each function and assess how these relate to output performance. Use this alongside GP and NN predictions to guide candidate refinement, while using model disagreement to avoid overly aggressive moves in uncertain regions.  
+Week 13: Conduct a final evaluation of GP and NN predictive accuracy, cross-validation performance and historical optimisation results to refine function-specific strategies. Combine PCA, K-Means, local refinement and model agreement with Probability of Improvement and Expected Improvement to select and validate the final candidates, before reflecting on overall performance and the exploration–exploitation trade-off in relation to reinforcement learning concepts.  
