@@ -5576,6 +5576,130 @@ The validated candidates were therefore selected as the final Round 13 submissio
 
 Overall, this round showed that PCA was most useful as an additional source of evidence rather than as a standalone optimisation method. It provided particularly useful guidance for F5–F8, while adding little for F1 and F3. Combining PCA with realised model accuracy, GP uncertainty, NN validation and candidate novelty allowed the final selections to remain function-specific while becoming increasingly focused on exploitation as the query budget reduces.  
 
+**Module 24 (Week 13)**
+
+**Methodology**
+
+For the final round of the BBO capstone project, I will build on the methods developed over the previous 12 weeks, using the accumulated observations and model evaluations to select one final query for each of the eight functions. As this is the last opportunity to improve the results, the strategy will place greater emphasis on exploiting established high-performing regions, while retaining some exploration where the available evidence remains unreliable. Rather than introducing entirely new models, I will focus on refining the existing function-specific approach and using previous results to make the most informed final selections possible.  
+
+Step 1 – Incorporate and assess the latest results  
+- Add the new observations to each function's dataset and compare the outputs with the previous best values. Identify which functions improved and where the latest candidates underperformed.  
+
+Step 2 – Review realised model prediction accuracy  
+- Compare the new outputs with the GP and NN predictions recorded before submission. Use the prediction errors and previous validation results to determine which model is currently more reliable for each function.  
+
+Step 3 – Update model diagnostics and validation  
+- Refit the GP models using the expanded datasets and review their fitted kernels, length scales and any warnings. Repeat NN validation to assess whether its performance remains reliable.  
+
+Step 4 – Review optimisation progress  
+- Examine how recently each function has improved and whether local refinement is still producing better results. Identify functions where progress is slowing and those with established high-performing regions.  
+
+Step 5 – Review PCA, clustering and neighbourhood evidence  
+- Revisit the PCA and K-Means results from previous weeks to identify promising regions and directions. Compare these findings with the performance of nearby observations to assess whether they provide useful guidance for the final queries.  
+
+Step 6 – Adjust the exploration–exploitation balance  
+- Place greater emphasis on exploiting known high-performing regions, as this is the final round of queries. Retain some exploration where the models remain unreliable or where there is limited evidence of a promising region.  
+
+Step 7 – Generate function-specific candidates  
+- Generate candidates using GP and NN predictions, focusing on local refinement around the strongest observations. Use PCA-guided searches, boundary refinement or wider exploration where appropriate for each function.  
+
+Step 8 – Evaluate and compare candidates  
+- Compare candidates using GP predictions, uncertainty, NN predictions, previous model accuracy, PCA evidence and distance from existing observations. Consider whether candidates are supported by multiple methods and whether they offer a reasonable chance of improving the current best.  
+
+Step 9 – Assess model disagreement and select final candidates  
+- Where GP and NN predictions disagree, treat this as additional uncertainty and consider more conservative candidates rather than automatically selecting the most optimistic prediction. Select one final point for each function and validate its dimensions, input bounds and uniqueness before submission.  
+
+Step 10 – Reflect on the overall optimisation strategy  
+- Review how the approach has developed over the 13 weeks and which methods have been most effective. Relate the exploration–exploitation decisions to reinforcement-learning concepts from Module 24 and consider how additional models or further observations could improve the approach in future.  
+
+**Step 1. Incorporate and assess the latest results**
+
+The first step was to compare the Round 13 outputs with the previous best results for each of the eight functions. This allowed me to identify whether the latest queries had produced any improvements and assess how successful the previous round's candidate selections had been. The new observations were then added to the existing datasets so that the models could be updated for the final round.  
+
+Function 1:  
+Previous best: 0.0000000000  
+New output:    0.0000000000  
+Difference:    -0.0000000000  
+New best:      False  
+
+Function 2:  
+Previous best: 0.7469622512  
+New output:    0.6820376147  
+Difference:    -0.0649246365  
+New best:      False  
+
+Function 3:  
+Previous best: -0.0003519729  
+New output:    -0.0060375017  
+Difference:    -0.0056855288  
+New best:      False  
+
+Function 4:  
+Previous best: 0.6229498177  
+New output:    0.0615049729  
+Difference:    -0.5614448448  
+New best:      False  
+
+Function 5:  
+Previous best: 8662.4825000000  
+New output:    8028.3868941008  
+Difference:    -634.0956058992  
+New best:      False  
+
+Function 6:  
+Previous best: -0.2397692962  
+New output:    -0.3055285870  
+Difference:    -0.0657592908  
+New best:      False  
+
+Function 7:  
+Previous best: 3.0700969378  
+New output:    2.9512452681  
+Difference:    -0.1188516697  
+New best:      False  
+
+Function 8:  
+Previous best: 9.9874191724  
+New output:    9.9831620391  
+Difference:    -0.0042571333  
+New best:      False  
+
+Round 13 did not produce a new best result for any of the eight functions. However, the results varied considerably between functions. F2, F7 and F8 remained relatively close to their previous best outputs, suggesting that the searches were still taking place in reasonably promising regions. F5 also returned a relatively high output, although below its previous best of approximately 8,662.  
+F3, F4 and F6 showed weaker results than their previous best observations, suggesting that the latest candidate movements did not lead to further improvements. F1 continued to produce outputs extremely close to zero, providing little additional evidence of a clear high-performing region.  
+Overall, these results suggest that the final round should place greater emphasis on refining established high-performing areas, while being cautious about moving too far from previous successful observations. They also reinforce the importance of assessing which models have been most reliable before selecting the final candidates.  
+
+**Step 2. Review realised model prediction accuracy**
+
+The actual Round 13 outputs were compared with the predictions made by the Gaussian Process and Neural Network models before submission. The absolute prediction error was calculated for each model by measuring the difference between the predicted and actual outputs. This allowed me to assess which model had been more accurate for each function and identify cases where predictions had been overly optimistic. The results were then used to inform how much weight should be given to each model during the final round, alongside previous prediction accuracy and validation results.
+
+Results:
+F1: No comparison available, as the candidate was selected through model-independent exploration.  
+F2: GP error: 0.3069; NN error: 0.0134. NN more accurate.  
+F3: GP error: 0.0138; NN error: 0.0065. NN more accurate.  
+F4: GP error: 0.7278; NN error: 0.3407. NN more accurate.  
+F5: GP error: 25.89; NN error: 43.80. GP more accurate.  
+F6: GP error: 0.1195; NN error: 0.0403. NN more accurate.  
+F7: GP error: 0.0938; NN error: 0.2243. GP more accurate.  
+F8: GP error: 0.0140; NN error: 0.1279. GP more accurate.  
+
+The NN was more accurate for four functions (F2, F3, F4 and F6), while the GP performed better for three (F5, F7 and F8). The NN was particularly accurate for F2, whereas the GP provided a very close prediction for F8. However, both models overestimated the outputs for F3, F4 and F6, with F4 showing particularly large errors. This suggests that some promising model predictions may not translate into equally strong actual results. Overall, the findings support continuing with a function-specific approach, placing greater emphasis on the NN for F2, F3 and F6, and the GP for F5, F7 and F8. F4 will require additional caution, while previous validation results will also be considered before making final selections.  
+
+**Step 3. Update model diagnostics and validation**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
