@@ -1,201 +1,262 @@
 
-# Week 03 — Gaussian Process Optimisation and SVM Analysis
+# Module 14 — Week 3: Gaussian process optimisation and SVM analysis
 
-**Module 14 | Week 3**
+## Weekly objective and step-by-step plan
 
-## Objective
+The objective of Week 3 was to incorporate the latest query results, reassess the Gaussian process (GP) models and select a third query point for each of the eight functions.
 
-The aim of Week 3 was to incorporate the latest observations, evaluate the performance of the previous queries and select the next input for each of the eight unknown functions. I continued using **Gaussian Process Regression (GPR)** and **Upper Confidence Bound (UCB)** as the primary optimisation approach, while introducing **Support Vector Machines (SVMs)** to investigate whether classification could provide additional guidance.
+This week also introduced support vector machines (SVMs) as an additional way of investigating the functions. I wanted to assess whether SVM classification could identify higher-performing regions and provide useful guidance where the GP models were struggling.
 
-Particular attention was given to Functions 1 and 6, where previous Gaussian Process models had experienced convergence issues.
+Particular attention was given to Functions 1 and 6, which had previously experienced modelling difficulties.
+
+The process followed seven steps:
+
+1. Incorporate the new observations and compare them with the previous best outputs.
+2. Refit the RBF Gaussian processes and examine their predictions and uncertainty.
+3. Introduce SVM classification and compare linear and RBF kernels.
+4. Reassess the exploration–exploitation balance for each function.
+5. Apply GP + UCB to functions with usable GP models.
+6. Use alternative selection methods for Functions 1 and 6.
+7. Validate and format the eight final queries.
 
 ## Methodology
 
-### Step 1 — Update the Observations and Assess Improvements
+The latest observations were incorporated into the cumulative datasets, and the Gaussian processes were refitted using RBF kernels, normalised outputs, ten optimiser restarts and a random state of 42.
 
-I added the eight outputs returned from the second-round queries to the existing datasets and compared them with the previous best observations.
+As in previous weeks, I used upper confidence bound (UCB) as the main acquisition function:
 
-| Function | Previous Best | New Output | Updated Best | Improved? |
-|:--|--:|--:|--:|:--|
-| 1 | ≈0 | ≈0 | ≈0 | No |
-| 2 | 0.611205 | 0.366010 | 0.611205 | No |
-| 3 | -0.020167 | -0.060870 | -0.020167 | No |
-| 4 | -0.300645 | -3.743172 | -0.300645 | No |
-| **5** | **2329.015854** | **2765.819787** | **2765.819787** | **Yes** |
-| **6** | **-0.714265** | **-0.458511** | **-0.458511** | **Yes** |
-| 7 | 1.950612 | 0.975233 | 1.950612 | No |
-| 8 | 9.821986 | 9.621122 | 9.821986 | No |
+**UCB(x) = μ(x) + κσ(x)**
 
-Functions **5 and 6** produced new best outputs. Function 5 improved by approximately **18.8%**, continuing the positive trend from the previous round and suggesting that the search was identifying a promising region.
+Here, μ(x) is the predicted output, σ(x) is predictive uncertainty and κ controls the relative importance of exploration.
 
-Function 6 also improved, moving from -0.7143 to -0.4585. This was encouraging because its Gaussian Process had previously experienced modelling difficulties. The remaining six functions did not improve, although their new observations still contributed information for the next round of model fitting.
+I retained κ = 2.5 and generated 100,000 candidate points for each function where GP + UCB was used.
 
-### Step 2 — Refit the Gaussian Processes and Investigate Convergence
+I also introduced SVM classification. Since the functions produce continuous outputs, I divided each function's observations into high- and low-performing classes using its median observed output. I then compared linear and RBF-kernel SVMs using three-fold cross-validation.
 
-I refitted the RBF Gaussian Processes using the expanded datasets and examined their optimised length scales.
+The SVM analysis was intended to supplement the existing optimisation approach rather than replace it automatically. Unlike a GP, an SVM classifier does not directly predict the continuous function output or provide the predictive uncertainty required by UCB.
 
-| Function | Fitted RBF Length Scale |
-|:--|--:|
-| **1** | **1e-5** |
-| 2 | 0.0427 |
-| 3 | 0.202 |
-| 4 | 0.495 |
-| 5 | 0.413 |
-| **6** | **1e-5** |
-| 7 | 0.244 |
-| 8 | 0.931 |
+## Results and interpretation by step
 
-Most functions continued to produce usable fitted models. Function 5's length scale increased from approximately **0.225 to 0.413**, suggesting a change in the model's estimated relationship between nearby inputs.
+### Step 1 — Incorporate new observations
 
-However, Functions **1 and 6** both reached the minimum RBF length scale of `1e-5`. I therefore investigated their predictions across 100,000 randomly generated candidate points to determine whether the models could meaningfully distinguish between different inputs.
+I compared the returned outputs from Week 2's proposed queries with the previous best observations.
+
+| Function | Previous best | New output | Updated best | Result |
+|---|---:|---:|---:|---|
+| 1 | ≈0 | ≈0 | ≈0 | No improvement |
+| 2 | 0.611205 | 0.366010 | 0.611205 | No improvement |
+| 3 | -0.020167 | -0.060870 | -0.020167 | No improvement |
+| 4 | -0.300645 | -3.743172 | -0.300645 | No improvement |
+| 5 | 2329.015854 | 2765.819787 | 2765.819787 | New best |
+| 6 | -0.714265 | -0.458511 | -0.458511 | New best |
+| 7 | 1.950612 | 0.975233 | 1.950612 | No improvement |
+| 8 | 9.821986 | 9.621122 | 9.821986 | No improvement |
+
+Two of the eight queries produced new best outputs.
+
+Function 5 improved from approximately 2329.02 to 2765.82, an increase of 18.8%. This continued the positive trend from previous rounds and suggested that the GP + UCB approach was identifying a promising region.
+
+Function 6 also improved, from -0.7143 to -0.4585. This was particularly encouraging because Function 6 had required maximum-distance exploration in Week 1 before returning to GP + UCB in Week 2.
+
+Although the remaining functions did not improve, their new observations still provided additional information for updating the models.
+
+### Step 2 — Refit and evaluate the Gaussian processes
+
+I refitted the RBF Gaussian processes using the expanded datasets and examined their fitted length scales.
+
+| Function | Week 2 length scale | Week 3 length scale |
+|---|---:|---:|
+| 1 | 1e-05 | 1e-05 |
+| 2 | 0.0453 | 0.0427 |
+| 3 | 0.202 | 0.202 |
+| 4 | 0.522 | 0.495 |
+| 5 | 0.225 | 0.413 |
+| 6 | 0.481 | 1e-05 |
+| 7 | 0.354 | 0.244 |
+| 8 | 0.913 | 0.931 |
+
+Most functions continued to produce usable fitted models. Function 5's length scale increased from approximately 0.225 to 0.413 following another successful observation.
+
+However, Functions 1 and 6 both reached the lower RBF length-scale bound of 1e-05 and generated convergence warnings.
+
+Function 1 had experienced this issue in previous weeks, but Function 6's return to the lower bound was unexpected after its improvement in Week 2.
+
+To investigate further, I examined the predicted means and uncertainty across 100,000 candidate points for both functions.
 
 | Diagnostic | Function 1 | Function 6 |
-|:--|--:|--:|
-| Predicted mean range | 0.0003003 | 0.0000000 |
-| Uncertainty range | 0.0009625 | 0.0000000 |
-| GP suitable for UCB? | Questionable | No |
+|---|---:|---:|
+| Predicted mean range | 0.0003003282 | 0.0000000000 |
+| Uncertainty range | 0.0009624562 | 0.0000000000 |
 
-Function 1 showed some variation in its predictions, but the recurring convergence warning indicated that the GP remained unreliable.
+The results showed different behaviour despite both models reaching the same length-scale bound.
 
-Function 6 was more problematic. Its predicted means and uncertainties were effectively identical across all candidate points. As a result, UCB would provide no meaningful basis for ranking unexplored inputs.
+Function 1 produced some variation in its predictions and uncertainty, suggesting that the GP could distinguish between at least some regions. However, the recurring convergence warning meant I remained cautious about relying on its predictions.
 
-This demonstrated why examining predictive behaviour was more useful than relying solely on convergence warnings or previous query performance.
+Function 6 produced identical predicted means and uncertainty across all candidates. Consequently, UCB would assign effectively identical scores to unexplored points, providing no meaningful basis for choosing between them.
 
-### Step 3 — Introduce and Compare SVM Models
+This demonstrated that a new best observation does not necessarily mean the refitted model has improved. Although Function 6's latest query was successful, its updated GP was no longer useful for guiding the next selection.
 
-I introduced SVMs to investigate whether the observed inputs could distinguish between relatively high- and low-performing regions.
+### Step 3 — Introduce and compare SVM models
 
-Because the functions produce continuous outputs, I converted the observations into binary classes using the **median output for each function**. Observations above the median were classified as high-performing, while those at or below it were classified as low-performing.
+I introduced SVMs to investigate whether the existing observations could distinguish between relatively high- and low-performing regions.
 
-I then fitted both linear and RBF-kernel SVMs and compared their performance using **three-fold cross-validation**.
+For each function, I calculated the median observed output and classified observations above the median as high-performing and those at or below it as low-performing.
 
-| Function | Linear SVM Accuracy | RBF SVM Accuracy | Better Model |
-|:--|--:|--:|:--|
-| 1 | 0.167 | 0.500 | RBF |
-| 2 | 0.667 | 0.833 | RBF |
-| 3 | 0.344 | 0.522 | RBF |
-| 4 | 0.627 | 0.782 | RBF |
-| 5 | 0.649 | 0.458 | Linear |
-| **6** | **0.821** | **0.768** | **Linear** |
-| 7 | 0.785 | 0.815 | RBF |
-| 8 | 0.857 | 0.833 | Linear |
+This produced approximately balanced classes, which was useful given the relatively small datasets.
 
-The results varied across functions. RBF SVMs performed better for Functions 1, 2, 3, 4 and 7, while linear SVMs performed better for Functions 5, 6 and 8.
+I then compared linear and RBF-kernel SVMs using three-fold cross-validation.
 
-Functions **2 and 4** showed particularly useful improvements with the nonlinear RBF kernel, suggesting that their higher-performing observations may be separated by more complex boundaries.
+| Function | Linear SVM accuracy | RBF SVM accuracy |
+|---|---:|---:|
+| 1 | 0.167 | 0.500 |
+| 2 | 0.667 | 0.833 |
+| 3 | 0.344 | 0.522 |
+| 4 | 0.627 | 0.782 |
+| 5 | 0.649 | 0.458 |
+| 6 | 0.821 | 0.768 |
+| 7 | 0.785 | 0.815 |
+| 8 | 0.857 | 0.833 |
 
-For **Function 6**, the linear SVM achieved an accuracy of **0.821**, making it a potentially useful alternative source of guidance given the failure of its current Gaussian Process.
+The RBF SVM achieved higher accuracy for Functions 1, 2, 3, 4 and 7, while the linear SVM performed better for Functions 5, 6 and 8.
 
-However, SVM classification does not directly predict continuous function outputs or provide the predictive uncertainty required by UCB. I therefore treated the results as supplementary evidence rather than replacing Bayesian Optimisation for every function.
+Functions 2 and 4 showed relatively strong improvements with the RBF kernel, suggesting that nonlinear decision boundaries may be useful for separating their higher- and lower-performing observations.
 
-### Step 4 — Reassess Exploration and Exploitation
+For Function 6, the linear SVM achieved an accuracy of 0.821, compared with 0.768 for the RBF model. This suggested that its observed outputs contained some structure that a linear classifier could identify, despite the difficulties with its Gaussian process.
 
-I combined the latest observations, GP diagnostics and SVM results to determine the most appropriate query strategy for each function.
+Function 1 remained problematic. Although its RBF SVM outperformed the linear alternative, an accuracy of 0.500 was not convincing evidence that the model could reliably identify higher-performing regions.
 
-| Function | Selected Strategy | Reasoning |
-|:--|:--|:--|
-| 1 | Maximum-distance exploration | GP remains unreliable; SVM results inconclusive |
-| 2 | GP + UCB | GP usable; nonlinear SVM suggests useful structure |
-| 3 | GP + UCB | Stable GP; limited evidence for changing strategy |
-| 4 | GP + UCB | Promising previously identified region |
-| 5 | GP + UCB | Successive improvements support further exploitation |
-| 6 | Linear SVM | GP predictions uninformative; strong SVM accuracy |
-| 7 | GP + UCB | GP remains usable |
-| 8 | GP + UCB | Stable GP; retain exploration–exploitation balance |
+These results supported considering the SVMs individually rather than assuming that one kernel or selection strategy would be suitable for every function.
 
-For the six functions with usable Gaussian Processes, I retained **UCB with κ = 2.5**, consistent with the previous round.
+The cross-validation results were also treated cautiously because the datasets were small and the median-based classes represented relative observed performance rather than known optimal regions.
 
-Functions 1 and 6 required separate strategies because their GP diagnostics indicated that the normal acquisition process was unsuitable or unreliable.
+### Step 4 — Reassess exploration and exploitation
 
-### Step 5 — Generate and Evaluate Candidate Queries
+I used the latest outputs, GP diagnostics and SVM results to reassess the query strategy for each function.
 
-For Functions 2, 3, 4, 5, 7 and 8, I generated 100,000 candidate points and calculated:
+The aim was to exploit promising regions where the models provided useful guidance while continuing to explore where predictions were unreliable or uncertainty suggested that other areas could be valuable.
 
-**UCB(x) = μ(x) + 2.5σ(x)**
+The main decisions were:
 
-The candidates with the highest UCB scores were selected for further evaluation.
+- Function 1: Continue maximum-distance exploration because the GP remained questionable and neither SVM provided convincing guidance.
+- Functions 2 and 3: Retain GP + UCB, as the models remained usable without strong evidence for changing strategy.
+- Function 4: Retain GP + UCB, with the previously identified promising region remaining relevant despite the latest query not improving the maximum.
+- Function 5: Continue searching around the high-performing region responsible for successive improvements.
+- Function 6: Investigate linear SVM-informed selection because its GP could no longer meaningfully rank candidates.
+- Functions 7 and 8: Retain GP + UCB to balance predicted performance and uncertainty.
 
-| Function | Predicted Output | Uncertainty | UCB Score |
-|:--|--:|--:|--:|
-| 2 | 0.449335 | 0.185666 | 0.913500 |
-| 3 | -0.076907 | 0.077556 | 0.116983 |
-| 4 | -0.064270 | 0.420976 | 0.988170 |
-| 5 | 2631.682259 | 240.331386 | 3232.510725 |
-| 7 | 1.662117 | 0.258204 | 2.307626 |
-| 8 | 9.635913 | 0.434286 | 10.721628 |
+For the six functions continuing with GP + UCB, I retained κ = 2.5.
 
-The results showed different exploration–exploitation behaviour across functions.
+### Step 5 — Apply GP + UCB
 
-**Functions 2, 4 and 7** selected points relatively close to their current best observations, indicating a greater emphasis on exploitation. Function 4 was particularly interesting because its predicted output of **-0.0643** was better than the current observed maximum of **-0.3006**, although this prediction was subject to considerable uncertainty.
+I generated 100,000 candidate points for Functions 2, 3, 4, 5, 7 and 8 and selected the candidates with the highest UCB scores.
 
-**Function 5** continued to search around its previously successful region. Its selected candidate retained high values for the second, third and fourth input dimensions, consistent with the pattern that had produced successive improvements.
+| Function | Predicted output | Uncertainty | UCB score | Distance from current best |
+|---|---:|---:|---:|---:|
+| 2 | 0.449335 | 0.185666 | 0.913500 | 0.0452 |
+| 3 | -0.076907 | 0.077556 | 0.116983 | 0.8461 |
+| 4 | -0.064270 | 0.420976 | 0.988170 | 0.1376 |
+| 5 | 2631.682259 | 240.331386 | 3232.510725 | 0.2030 |
+| 7 | 1.662117 | 0.258204 | 2.307626 | 0.1612 |
+| 8 | 9.635913 | 0.434286 | 10.721628 | 0.8392 |
 
-In contrast, **Functions 3 and 8** selected more distant candidates, suggesting that uncertainty was encouraging greater exploration.
+The selected points showed different balances of exploration and exploitation.
 
-This supported retaining κ = 2.5, as the acquisition function was already producing different search behaviours depending on the individual GP predictions.
+Functions 2, 4 and 7 remained relatively close to their current best observations, suggesting greater exploitation of previously successful regions.
 
-### Step 6 — Apply Alternative Strategies to Functions 1 and 6
+Function 4 was particularly interesting because its predicted output of -0.0643 was better than the current observed maximum of -0.3006. Although uncertainty remained substantial, the candidate appeared promising.
 
-**Function 1 — Maximum-Distance Exploration**
+Function 5 also continued to search around its high-performing region. The selected point retained high values for its second, third and fourth input dimensions, consistent with the area responsible for the previous improvements.
 
-Function 1's GP continued to experience convergence problems, while neither SVM provided convincing evidence of a reliable high-performing region.
+In contrast, Functions 3 and 8 selected points much further from their current best observations, with distances of approximately 0.846 and 0.839 respectively. This suggested that uncertainty was encouraging greater exploration.
 
-I therefore selected the candidate with the greatest distance from its nearest existing observation.
+These results supported retaining κ = 2.5. The same acquisition parameter was producing different exploration–exploitation behaviour depending on each function's fitted predictions and uncertainty.
 
-- Selected point: `[0.000045, 0.003062]`
-- Distance to nearest observation: **0.321671**
+### Step 6 — Apply alternative strategies to Functions 1 and 6
 
-This deliberately explored a relatively unsampled part of the search space rather than relying on potentially misleading GP predictions.
+#### Function 1 — Maximum-distance exploration
 
-**Function 6 — Linear SVM Selection**
+Function 1 continued to reach the lower RBF length-scale bound, and its SVM results did not provide convincing evidence of a reliable high-performing region.
 
-Function 6's GP produced constant predictions and uncertainty across the candidate space, making UCB unsuitable.
+I therefore continued using maximum-distance exploration.
 
-I instead used the fitted linear SVM to score 100,000 candidate points and selected the candidate with the strongest decision score for the higher-performing class.
+For each of 100,000 candidate points, I calculated its distance to the nearest existing observation and selected the point with the greatest minimum distance.
 
-- Selected point: `[0.013758, 0.147930, 0.445597, 0.994845, 0.013469]`
-- SVM decision score: **5.2721**
-- Distance from current best: **0.4028**
+| Measure | Result |
+|---|---|
+| Selected point | `[0.000045, 0.003062]` |
+| Distance to nearest observation | 0.321671 |
 
-The selected candidate was classified strongly within the higher-performing region while remaining some distance from the best existing observation.
+This deliberately prioritised a relatively unexplored part of the input space rather than relying on a GP model whose behaviour remained questionable.
 
-Although the SVM score is not a prediction of the function's output, this provided an alternative approach to selecting a query when the Gaussian Process could not distinguish between candidates.
+Although this approach did not guarantee a better output, it could provide useful information for subsequent model fitting.
 
-### Step 7 — Validate and Finalise the Queries
+#### Function 6 — Linear SVM-informed selection
 
-I checked that all eight selected points were within the permitted `[0, 1]` input range, did not duplicate previous observations and matched the intended selection strategies.
+Function 6 required a different approach because its GP produced effectively constant predictions and uncertainty across the candidate space.
 
-| Function | Method | Nearest Observation Distance | Valid |
-|:--|:--|--:|:--|
-| 1 | Maximum-distance | 0.321671 | Yes |
-| 2 | GP + UCB | 0.045156 | Yes |
-| 3 | GP + UCB | 0.306635 | Yes |
-| 4 | GP + UCB | 0.137608 | Yes |
-| 5 | GP + UCB | 0.203041 | Yes |
-| 6 | Linear SVM | 0.402781 | Yes |
-| 7 | GP + UCB | 0.161151 | Yes |
-| 8 | GP + UCB | 0.800486 | Yes |
+The linear SVM had achieved a cross-validation accuracy of 0.821, so I fitted it to all available Function 6 observations and used its decision function to score 100,000 candidate points.
 
-All eight queries passed validation. The final points were formatted to six decimal places for submission.
+I selected the candidate with the highest decision score for the higher-performing class.
 
-#### Final Query Points
+| Measure | Result |
+|---|---|
+| Selected point | `[0.013758, 0.147930, 0.445597, 0.994845, 0.013469]` |
+| SVM decision score | 5.272052 |
+| Distance from current best | 0.402781 |
 
-    Function 1: 0.000045-0.003062
-    Function 2: 0.709627-0.881953
-    Function 3: 0.732035-0.997300-0.015653
-    Function 4: 0.391976-0.424757-0.494823-0.464424
-    Function 5: 0.671629-0.981118-0.990458-0.985189
-    Function 6: 0.013758-0.147930-0.445597-0.994845-0.013469
-    Function 7: 0.021549-0.313334-0.360216-0.141732-0.295328-0.686548
-    Function 8: 0.025529-0.451238-0.098209-0.031391-0.412421-0.138573-0.114934-0.994361
+The selected candidate had a strong positive decision score and was approximately 0.403 from the current best observation.
 
-## Results and Reflection
+This suggested that the point was strongly classified within the higher-performing region while still exploring a location some distance from the best-known input.
 
-Week 3 produced new best observed outputs for **Functions 5 and 6**, while the expanded datasets provided further evidence about the behaviour of the remaining functions.
+Importantly, the SVM decision score is not a predicted function output. It measures the candidate's position relative to the learned classification boundary, so the selected point was considered a reasonable alternative rather than a guaranteed improvement.
 
-The main development was introducing SVMs as an additional diagnostic and using their results to inform function-specific optimisation decisions. Although GP-UCB remained appropriate for most functions, the persistent modelling problems for Functions 1 and 6 demonstrated that alternative selection methods could be valuable.
+### Step 7 — Validate the final proposed queries
 
-Function 5 continued to provide evidence that exploiting a promising region could produce successive improvements. Function 6 illustrated a different challenge: despite achieving a better observed output, its refitted Gaussian Process became uninformative, requiring an alternative query strategy.
+Before submission, I checked that all eight selected points were within the permitted [0, 1] input range and did not duplicate existing observations.
 
-In the next round, I will assess the outputs from these selections and investigate whether adjusting the UCB exploration parameter or introducing another acquisition function could improve the balance between exploration and exploitation.
+I also calculated their distances to the nearest existing observations as a final check on the selected strategies.
+
+| Function | Method | Nearest observation distance |
+|---|---|---:|
+| 1 | Max-distance exploration | 0.321671 |
+| 2 | GP + UCB | 0.045156 |
+| 3 | GP + UCB | 0.306635 |
+| 4 | GP + UCB | 0.137608 |
+| 5 | GP + UCB | 0.203041 |
+| 6 | Linear SVM | 0.402781 |
+| 7 | GP + UCB | 0.161151 |
+| 8 | GP + UCB | 0.800486 |
+
+All eight proposed queries passed the validation checks.
+
+The final queries, formatted to six decimal places, were:
+
+| Function | Selection method | Proposed query coordinates |
+|---|---|---|
+| 1 | Max-distance exploration | `[0.000045, 0.003062]` |
+| 2 | GP + UCB | `[0.709627, 0.881953]` |
+| 3 | GP + UCB | `[0.732035, 0.997300, 0.015653]` |
+| 4 | GP + UCB | `[0.391976, 0.424757, 0.494823, 0.464424]` |
+| 5 | GP + UCB | `[0.671629, 0.981118, 0.990458, 0.985189]` |
+| 6 | Linear SVM | `[0.013758, 0.147930, 0.445597, 0.994845, 0.013469]` |
+| 7 | GP + UCB | `[0.021549, 0.313334, 0.360216, 0.141732, 0.295328, 0.686548]` |
+| 8 | GP + UCB | `[0.025529, 0.451238, 0.098209, 0.031391, 0.412421, 0.138573, 0.114934, 0.994361]` |
+
+## Weekly summary and next steps
+
+Week 3 produced new best observations for Functions 5 and 6. Function 5 continued its improvement through GP + UCB, while Function 6 demonstrated that a successful query could still be followed by difficulties when refitting the Gaussian process.
+
+The main methodological development was introducing SVMs to investigate high- and low-performing regions. The results varied across functions, with some favouring nonlinear classification and others performing better with linear models.
+
+For Function 6, the relatively strong linear SVM results provided an alternative way of selecting a query when the GP was unable to distinguish between candidate points. Function 1 continued with maximum-distance exploration because its modelling difficulties remained unresolved.
+
+The next steps were to:
+
+- Submit the eight proposed query points and assess their returned outputs.
+- Incorporate the new observations and refit the GP models.
+- Reassess whether the SVM-informed selection improved Function 6.
+- Investigate whether alternative acquisition functions or adjustments to κ could improve the exploration–exploitation balance in subsequent rounds.
+
+Overall, Week 3 showed the importance of assessing model behaviour rather than relying only on whether the latest query improved the observed maximum. GP + UCB remained the main optimisation approach, while SVM classification and maximum-distance exploration provided alternatives when the Gaussian processes were less informative.
+
 
