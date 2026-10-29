@@ -1154,7 +1154,7 @@ F8: GP + UCB
 
 
 
-**Module 16 - Week 5**
+**Module 15 - Week 4**
 
 **Methodology**
 
@@ -1728,7 +1728,7 @@ The final validation confirmed that all eight proposed queries were within the p
 Function 6 represents the highest-risk selection this round because it lies substantially further from existing observations; however, this was a deliberate choice to gather information from a genuinely unexplored region after both the GP and previous SVM-guided approach provided limited useful guidance.
 
 
-**Module 15 - Week 4**
+**Module 16 - Week 5**
 
 **Methodology**
 
