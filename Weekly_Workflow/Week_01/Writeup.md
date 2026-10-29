@@ -1,39 +1,43 @@
+
 # Module 12 — Week 1: Gaussian Process Optimisation
 
 ## Weekly Objective and Step-by-Step Plan
 
-The objective of Week 1 was to establish a baseline optimisation approach for eight unknown black-box functions and identify one new query point for each function.
+The objective of Week 1 was to establish an initial optimisation approach for eight unknown black-box functions and select one new query point for each function.
 
 The process followed six steps:
 
 1. Examine the initial observations and identify the highest and lowest outputs.
-2. Fit Gaussian Process (GP) models using RBF kernels and investigate convergence warnings.
-3. Generate 100,000 candidate points per function and examine predicted outputs and uncertainty.
-4. Apply Upper Confidence Bound (UCB) to identify promising candidates.
-5. Use an alternative exploration strategy where GP predictions were uninformative.
-6. Assess the final query points against the best existing observations.
+2. Fit RBF Gaussian Process (GP) models and investigate convergence warnings.
+3. Generate 100,000 candidate points per function and assess predicted outputs and uncertainty.
+4. Use Upper Confidence Bound (UCB) to identify promising candidates.
+5. Apply distance-based exploration where GP predictions were uninformative.
+6. Assess and record the final proposed query points.
 
 ## Methodology
 
-Each function was modelled independently using Gaussian Process Regression with an RBF kernel. This provided estimates of both the expected output and uncertainty at previously unobserved locations.
+Each function was modelled independently using Gaussian Process Regression with an RBF kernel, normalised outputs, ten optimiser restarts and a random state of 42.
 
-For each function, 100,000 random candidate points were generated within the permitted input space of [0, 1] for every dimension.
+For each function, 100,000 candidate points were generated uniformly within the permitted input space of [0, 1] using a fixed random seed.
 
 Candidate points were ranked using the Upper Confidence Bound acquisition function:
 
 **UCB(x) = μ(x) + κσ(x)**
 
-Where μ(x) represents the predicted output, σ(x) represents predictive uncertainty, and κ controls the balance between exploration and exploitation.
+Where:
+- **μ(x)** is the GP's predicted mean output.
+- **σ(x)** is the predictive standard deviation.
+- **κ** controls the balance between exploration and exploitation.
 
-I selected **κ = 2.5**, allowing the acquisition function to consider both high predicted outputs and uncertain regions.
+I selected **κ = 2.5**, allowing UCB to consider both predicted performance and uncertainty.
 
-Where the fitted GP could not meaningfully distinguish between candidates, I used distance-based exploration instead.
+Where GP predictions were effectively constant across the candidate space, I used maximum-distance exploration instead.
 
 ## Results and Interpretation by Step
 
 ### Step 1 — Examine Initial Observations
 
-The initial observations established the highest and lowest outputs for each function.
+I examined the initial datasets and identified the highest and lowest observed outputs for each function.
 
 | Function | Highest Observed Output | Lowest Observed Output |
 |---|---:|---:|
@@ -46,15 +50,15 @@ The initial observations established the highest and lowest outputs for each fun
 | 7 | 1.364968 | 0.002701 |
 | 8 | 9.598482 | 5.592193 |
 
-The observations revealed considerable differences in output scale. Function 1 had a maximum extremely close to zero, whereas Function 5 exceeded 1,000.
+The observations showed considerable variation in output scale. Function 1 had a maximum extremely close to zero, whereas Function 5 exceeded 1,000.
 
-This reinforced the decision to model each function separately rather than assume similar behaviour across the eight functions.
+This reinforced the importance of modelling each function independently.
 
 ### Step 2 — Fit RBF Gaussian Processes
 
-The initial GP fitting produced convergence warnings for **Functions 1, 5 and 6**, where the optimised RBF length scales reached their lower bounds.
+The initial GP models produced RBF length scales at the lower bound of **1e-5** for Functions 1, 5 and 6.
 
-I investigated whether relaxing the lower bound would allow the models to find more suitable values.
+I investigated whether widening the permitted length-scale range would allow the optimiser to identify more suitable values.
 
 | Function | Length Scale After Relaxing Bounds | Interpretation |
 |---|---:|---|
@@ -62,24 +66,24 @@ I investigated whether relaxing the lower bound would allow the models to find m
 | 5 | 0.269 | Settled at a more moderate length scale |
 | 6 | 1e-10 | Continued towards the minimum permitted value |
 
-Function 5 improved after relaxing the bounds, suggesting that its original warning was associated with the optimiser reaching the permitted limit.
+Function 5 converged to a length scale of 0.269 after widening the bounds. I therefore **refitted Function 5 using the wider bounds and replaced its original GP model**.
 
-Functions 1 and 6 continued to favour extremely small length scales. This suggested that their GPs were modelling very rapid changes over short distances.
+Functions 1 and 6 continued to favour extremely small length scales. This suggested that their models were treating nearby observations as becoming unrelated over very short distances.
 
-I therefore retained the original models for Functions 1 and 6 and investigated whether their predictions were sufficiently informative for candidate selection.
+I retained their original GP models but investigated whether the resulting predictions were sufficiently informative for candidate selection.
 
 ### Step 3 — Generate Candidates and Assess Predictions
 
-I generated **100,000 random candidate points per function** and used the fitted GPs to calculate predicted means and standard deviations.
+I generated 100,000 random candidate points for each function and used the fitted GPs to calculate predicted means and uncertainty.
 
-The most important finding was that Functions 1 and 6 produced effectively constant predictions across the candidate search space.
+Functions 1 and 6 produced effectively constant predictions across the candidate search space.
 
 | Function | Approximate Predicted Mean | Approximate Uncertainty |
 |---|---:|---:|
 | 1 | -0.000361 | 0.001082 |
 | 6 | -1.495390 | 0.449000 |
 
-Their extremely small RBF length scales meant that the models treated almost all unobserved candidate locations as unrelated to the existing observations.
+Their extremely small RBF length scales meant that the models treated almost all unobserved candidates as unrelated to the existing observations.
 
 Consequently, neither predicted performance nor uncertainty provided a meaningful basis for distinguishing between candidate points.
 
@@ -87,19 +91,19 @@ The remaining six functions showed variation in their predictions and uncertaint
 
 ### Step 4 — Apply Upper Confidence Bound
 
-I calculated UCB scores using **κ = 2.5** and selected the highest-scoring candidate for each function.
+I calculated UCB scores for all 100,000 candidate points per function using **κ = 2.5**.
 
-For Functions **2, 3, 4, 5, 7 and 8**, UCB provided a useful ranking by combining predicted performance with uncertainty.
+For Functions **2, 3, 4, 5, 7 and 8**, the highest-scoring candidates were retained as the proposed queries.
 
-For Functions **1 and 6**, however, the near-constant predictions resulted in almost flat UCB scores. Although the calculation still identified numerical maxima, these selections were not meaningfully supported by the models.
+For Functions **1 and 6**, the nearly constant predictions resulted in effectively flat UCB scores. Although the calculation still returned a highest-scoring candidate, this selection was not meaningfully supported by the GP.
 
-I therefore decided not to use their UCB-selected points.
+I therefore decided not to use the UCB-selected points for these two functions.
 
-### Step 5 — Apply Distance-Based Exploration
+### Step 5 — Apply Maximum-Distance Exploration
 
-For Functions 1 and 6, I adopted a distance-based exploration strategy.
+For Functions 1 and 6, I adopted **Max-distance exploration**.
 
-Rather than relying on unreliable GP predictions, I selected the candidate with the greatest distance from its nearest existing observation.
+I calculated each candidate's Euclidean distance to its nearest existing observation and selected the candidate with the greatest nearest-observation distance.
 
 | Function | Selected Exploration Point | Distance to Nearest Observation |
 |---|---|---:|
@@ -108,46 +112,45 @@ Rather than relying on unreliable GP predictions, I selected the candidate with 
 
 These were the most distant candidates identified among the 100,000 sampled points for their respective functions.
 
-The intention was to obtain information from less-explored regions rather than immediately maximise predicted performance.
+This approach prioritised gathering information from less-explored regions rather than relying on uninformative GP predictions.
 
-Once the new observations became available, I planned to incorporate them into the datasets and reassess the GP models.
+### Step 6 — Assess Final Proposed Query Points
 
-### Step 6 — Assess Final Query Points
-
-Finally, I compared the proposed queries with the coordinates of the highest observed output for each function.
+Finally, I compared each proposed query with the coordinates of the highest observed output for its function.
 
 | Function | Selection Method | Distance from Current Best |
 |---|---|---:|
-| 1 | Distance-based exploration | 0.7760 |
-| 2 | UCB | 0.1307 |
-| 3 | UCB | 0.2903 |
-| 4 | UCB | 0.2857 |
-| 5 | UCB | 0.1833 |
-| 6 | Distance-based exploration | 1.1281 |
-| 7 | UCB | 0.2062 |
-| 8 | UCB | 0.9368 |
+| 1 | Max-distance exploration | 0.7760 |
+| 2 | GP + UCB | 0.1307 |
+| 3 | GP + UCB | 0.2903 |
+| 4 | GP + UCB | 0.2857 |
+| 5 | GP + UCB | 0.1833 |
+| 6 | Max-distance exploration | 1.1281 |
+| 7 | GP + UCB | 0.2062 |
+| 8 | GP + UCB | 0.9368 |
 
-Functions 2, 3, 4, 5 and 7 selected points relatively close to their best existing observations, indicating that UCB retained an exploitation component.
+Functions 2, 3, 4, 5 and 7 selected points relatively close to their best existing observations, suggesting that GP + UCB retained an exploitation component.
 
-Function 8 selected a more distant point, suggesting greater exploration.
+Function 8 selected a more distant point, indicating greater exploration relative to its current best observation.
 
-Functions 1 and 6 also selected distant points, although this was a deliberate consequence of switching to distance-based exploration.
+Functions 1 and 6 also selected distant points, although this was a deliberate consequence of adopting Max-distance exploration.
 
-The exact proposed coordinates for all eight functions are recorded in the accompanying Python notebook.
+The exact coordinates for all eight proposed queries are recorded in the notebook's **Final Submission Summary**.
 
 ## Weekly Summary and Next Steps
 
-Week 1 established a Gaussian Process and UCB-based optimisation approach for the eight black-box functions.
+Week 1 established a reproducible GP-based optimisation approach using RBF kernels, 100,000 candidate points per function and UCB with κ = 2.5.
 
-The main finding was that **the effectiveness of an acquisition function depends on the quality of its underlying surrogate model**.
+The main finding was that **an acquisition function depends on its underlying surrogate model providing informative predictions**.
 
-Although UCB was suitable for six functions, the nearly constant GP predictions for Functions 1 and 6 required a different strategy.
+GP + UCB was used for six functions, while Functions 1 and 6 required Max-distance exploration because their GP predictions and uncertainty were effectively constant.
 
 The next steps were to:
 
-- Submit the eight selected query points and obtain their outputs.
+- Submit the eight proposed query points and obtain their outputs.
 - Incorporate the new observations into the existing datasets.
-- Refit the GP models and assess whether the additional data improved their predictions.
+- Refit the GP models and reassess their behaviour.
 - Consider alternative kernels, such as Matérn, if Functions 1 and 6 continued to produce uninformative predictions.
 
-This provided a starting point for adapting the optimisation strategy as additional observations became available.
+These results provided the starting point for adapting the optimisation strategy as further observations became available.
+
