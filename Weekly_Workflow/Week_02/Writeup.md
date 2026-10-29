@@ -1,264 +1,217 @@
 
-# Module 13 — Week 2: Gaussian Process Optimisation
+# Module 13 — Week 2: Gaussian process optimisation
+
+## Weekly objective and step-by-step plan
+
+The objective of Week 2 was to incorporate the results from the first round of queries, assess the performance of the initial optimisation strategy and select a second query point for each of the eight functions.
+
+A particular focus was whether the additional observations had improved the Gaussian process (GP) models for Functions 1 and 6, which had required maximum-distance exploration in Week 1 because their predictions were largely uninformative.
+
+The process followed seven steps:
+
+1. Incorporate the new observations and compare them with the previous best outputs.
+2. Refit the RBF Gaussian processes and assess changes in the fitted length scales.
+3. Compare RBF and Matérn kernels for Function 1.
+4. Generate candidate points and apply upper confidence bound (UCB) where the models were informative.
+5. Assess the proposed queries in terms of exploration and exploitation.
+6. Select an exploration-based query for Function 1.
+7. Validate the final proposed queries.
 
 ## Methodology
 
-### Step 1 — Incorporate New Observations and Assess Week 1 Performance
+The eight new outputs from Week 1 were added to their respective datasets, giving each function an additional observation.
 
-I began by adding the eight new observations returned from the Week 1 queries to their respective datasets. I then compared each new output with the previous highest observed value to assess the effectiveness of the initial optimisation strategy.
+I then refitted the Gaussian process models using RBF kernels, normalised outputs, ten optimiser restarts and a random state of 42, consistent with the initial approach.
 
-The results were:
-
-| Function | Previous Best | New Output | Improvement | Result |
-|:--|--:|--:|--:|:--|
-| **1** | ~0.000000 | 0.000000 | ~0.000000 | No improvement |
-| **2** | 0.611205 | -0.082041 | -0.693246 | No improvement |
-| **3** | -0.034835 | -0.020167 | +0.014668 | New best |
-| **4** | -4.025542 | -0.300645 | +3.724898 | New best |
-| **5** | 1088.859618 | 2329.015854 | +1240.156236 | New best |
-| **6** | -0.714265 | -2.661556 | -1.947291 | No improvement |
-| **7** | 1.364968 | 1.950612 | +0.585644 | New best |
-| **8** | 9.598482 | 9.821986 | +0.223504 | New best |
-
-**Five of the eight queries produced new best observations**, with Functions 4 and 5 showing particularly substantial improvements.
-
-Function 4 improved from approximately -4.03 to -0.30, while Function 5 more than doubled its previous maximum, increasing from approximately 1,089 to 2,329.
-
-Functions 3, 7 and 8 also improved on their previous maxima, suggesting that UCB had successfully identified promising areas for several functions.
-
-Functions 1, 2 and 6 did not improve. However, Functions 1 and 6 had deliberately used distance-based exploration in Week 1 because their Gaussian Process models were unable to provide meaningful guidance through UCB.
-
-Although these queries did not produce higher outputs, they provided additional observations from previously unexplored regions. These could still be valuable for improving the models in subsequent iterations.
-
-### Step 2 — Refit the RBF Gaussian Processes
-
-After incorporating the new observations, I refitted the **Gaussian Process (GP)** models using the same **Radial Basis Function (RBF)** kernel as Week 1.
-
-The aim was to determine whether the additional information had changed how the models represented each function, particularly for Functions 1 and 6, which previously had extremely small fitted length scales.
-
-The updated fitted length scales were:
-
-| Function | Updated RBF Length Scale |
-|:--|--:|
-| **1** | 1e-05 |
-| **2** | 0.0453 |
-| **3** | 0.202 |
-| **4** | 0.522 |
-| **5** | 0.225 |
-| **6** | 0.481 |
-| **7** | 0.354 |
-| **8** | 0.913 |
-
-**Key Observations**
-
-Most functions produced reasonable fitted length scales, with the models continuing to identify relationships between observations across different regions of the search space.
-
-The most significant change was observed in **Function 6**.
-
-In Week 1, its RBF length scale had reached the lower bound of 1e-05, causing the model to produce almost identical predictions across unobserved candidate points.
-
-After incorporating the exploratory observation, the fitted length scale increased substantially to **0.481**.
-
-This suggested that the additional observation had helped the model identify a more useful relationship between inputs and outputs.
-
-Although the Week 1 query had not improved Function 6's maximum output, it appeared to have improved the GP's ability to model the function.
-
-As a result, I decided that Function 6 could return to the standard UCB acquisition strategy.
-
-**Function 1**, however, continued to reach the lower bound of 1e-05 and produced another convergence warning.
-
-This suggested that the additional exploratory observation had not resolved the original modelling issue.
-
-I therefore decided to investigate whether an alternative kernel could provide a more informative model before selecting Function 1's next query.
-
-### Step 3 — Compare RBF and Matérn Kernels for Function 1
-
-As Function 1 continued to produce an extremely small RBF length scale, I tested a **Matérn kernel** as an alternative.
-
-The RBF kernel assumes a particularly smooth underlying function, whereas the Matérn kernel allows greater flexibility in the smoothness of the relationships being modelled.
-
-I used a Matérn kernel with **ν = 2.5** and compared its fitted behaviour with the existing RBF model.
-
-The optimised kernels were:
-
-| Kernel | Fitted Length Scale |
-|:--|--:|
-| **RBF** | 1e-05 |
-| **Matérn (ν = 2.5)** | 1e-05 |
-
-Both kernels reached the same lower bound, suggesting that changing the smoothness assumptions alone had not resolved the modelling issue.
-
-However, I wanted to assess whether the two models produced different predictions despite their similarly small length scales.
-
-I therefore generated **100,000 candidate points** for Function 1 and compared the predicted mean outputs and uncertainty from each model.
-
-| Kernel | Predicted Output Range | Uncertainty Range |
-|:--|:--|:--|
-| **RBF** | -0.0003278239 to -0.0000001931 | 0.0000355799 to 0.0010366701 |
-| **Matérn** | -0.0003278239 to -0.0000003215 | 0.0000459032 to 0.0010366701 |
-
-**Assessment**
-
-The two kernels produced very similar prediction and uncertainty ranges across the candidate points.
-
-Although some variation was present, neither kernel provided a clear improvement in the ability to distinguish between unexplored regions.
-
-This suggested that the difficulty was not simply caused by the RBF kernel's smoothness assumptions. Instead, the existing observations may not yet contain enough information for either model to represent the function effectively.
-
-As neither kernel demonstrated a clear advantage, I decided to retain an **exploration-based approach for Function 1**, rather than rely on UCB to select a point using predictions that remained difficult to interpret.
-
-I would continue to gather observations from less explored areas and reassess the model as more information became available.
-
-### Step 4 — Generate Candidate Points and Apply UCB
-
-For Functions **2–8**, I generated another **100,000 random candidate points** within the permitted input range of 0 to 1.
-
-Using the updated RBF Gaussian Processes, I calculated the predicted mean output and uncertainty for each candidate.
-
-I then applied the **Upper Confidence Bound (UCB)** acquisition function:
+For Functions 2–8, I generated 100,000 candidate points per function within the permitted input space of [0, 1] and applied GP + UCB:
 
 **UCB(x) = μ(x) + κσ(x)**
 
-Where:
+Where μ(x) represents the predicted output, σ(x) represents predictive uncertainty and κ controls the relative weighting of exploration.
 
-- **μ(x):** Predicted mean output.
-- **σ(x):** Predictive standard deviation.
-- **κ:** Exploration parameter.
+I retained κ = 2.5 to maintain consistency with Week 1 and assess how the additional observations affected query selection without changing the acquisition parameter.
 
-I retained **κ = 2.5**, consistent with Week 1.
+For Function 1, I investigated whether a Matérn kernel with ν = 2.5 could improve on the RBF model. As neither model provided sufficiently informative predictions, I continued using maximum-distance exploration.
 
-This allowed me to assess the impact of the new observations and updated models without introducing additional changes to the acquisition strategy.
+## Results and interpretation by step
 
-For each function, I selected the candidate with the highest UCB score.
+### Step 1 — Incorporate new observations
 
-| Function | Predicted Output | Uncertainty | Highest UCB Score |
-|:--|--:|--:|--:|
-| **2** | 0.441071 | 0.190032 | 0.916151 |
-| **3** | -0.055801 | 0.074303 | 0.129955 |
-| **4** | -1.666506 | 0.886853 | 0.550627 |
-| **5** | 2112.903796 | 303.291367 | 2871.132212 |
-| **6** | -0.664546 | 0.355483 | 0.224161 |
-| **7** | 1.772966 | 0.240968 | 2.375386 |
-| **8** | 9.712587 | 0.462513 | 10.868871 |
+I compared the eight returned outputs with the previous highest observations to assess the effectiveness of the first-round queries.
 
-**Assessment**
+| Function | Previous best | New output | Improvement | Result |
+|---|---:|---:|---:|---|
+| 1 | ~0.000000 | 0.000000 | ~0.000000 | No improvement |
+| 2 | 0.611205 | -0.082041 | -0.693246 | No improvement |
+| 3 | -0.034835 | -0.020167 | +0.014668 | New best |
+| 4 | -4.025542 | -0.300645 | +3.724898 | New best |
+| 5 | 1088.859618 | 2329.015854 | +1240.156236 | New best |
+| 6 | -0.714265 | -2.661556 | -1.947291 | No improvement |
+| 7 | 1.364968 | 1.950612 | +0.585644 | New best |
+| 8 | 9.598482 | 9.821986 | +0.223504 | New best |
 
-The updated models produced different balances of predicted performance and uncertainty across the functions.
+Five of the eight queries produced new best observations, with Functions 4 and 5 showing particularly large improvements. Function 4 improved from approximately -4.03 to -0.30, while Function 5 more than doubled its previous maximum.
 
-Functions **5 and 7** selected candidates with particularly strong predicted outputs following their successful first-round queries. This suggested that the models were continuing to identify promising regions around areas that had already performed well.
+Functions 3, 7 and 8 also improved, suggesting that GP + UCB had identified promising areas for several functions.
 
-For **Function 4**, uncertainty made a relatively large contribution to the selected candidate's UCB score, indicating a greater exploratory element.
+Functions 1, 2 and 6 did not improve. However, Functions 1 and 6 had deliberately used maximum-distance exploration in Week 1. Although their new outputs were not higher, these observations provided information from previously underrepresented regions of the search space.
 
-Importantly, **Function 6** now produced a meaningful UCB selection following the improvement in its fitted RBF length scale.
+### Step 2 — Refit the RBF Gaussian processes
 
-This represented a change from Week 1, when the model's almost constant predictions had made UCB ineffective.
+After incorporating the new observations, I refitted the RBF models to assess whether their fitted behaviour had changed.
 
-Before finalising these queries, I wanted to examine how far the selected points were from the current best observations to better understand the balance between exploration and exploitation.
+| Function | Updated RBF length scale |
+|---|---:|
+| 1 | 1e-05 |
+| 2 | 0.0453 |
+| 3 | 0.202 |
+| 4 | 0.522 |
+| 5 | 0.225 |
+| 6 | 0.481 |
+| 7 | 0.354 |
+| 8 | 0.913 |
 
-### Step 5 — Assess the Proposed Queries Against Current Best Observations
+The most significant change was in Function 6. Its fitted length scale increased from the lower bound of 1e-05 in Week 1 to approximately 0.481.
 
-I compared each UCB-selected point with the input coordinates associated with the highest observed output for its function.
+This suggested that the additional observation had helped the GP identify relationships between inputs and outputs across a wider region of the search space.
 
-Using **Euclidean distance**, I calculated how far each proposed query was from the current best-known point.
+Although the exploratory query had not improved Function 6's maximum output, it appeared to have improved the model's ability to distinguish between candidate locations.
 
-This provided an additional indication of whether the model was exploiting an established high-performing region or exploring a different part of the search space.
+I therefore decided that Function 6 could return to GP + UCB for the second round.
 
-Distance was not treated as a definitive measure of exploration or exploitation, but considered alongside the predicted outputs and uncertainty estimates.
+Function 1, however, continued to reach the lower length-scale bound of 1e-05 and produced another convergence warning.
 
-| Function | Current Best Output | Distance From Current Best |
-|:--|--:|--:|
-| **2** | 0.611205 | 0.0475 |
-| **3** | -0.020167 | 0.3171 |
-| **4** | -0.300645 | 0.1609 |
-| **5** | 2329.015854 | 0.1658 |
-| **6** | -0.714265 | 0.5785 |
-| **7** | 1.950612 | 0.2490 |
-| **8** | 9.821986 | 0.9190 |
+This indicated that the additional exploratory observation had not resolved the original modelling issue, so I decided to investigate an alternative kernel before selecting its next query.
 
-**Interpretation**
+### Step 3 — Compare RBF and Matérn kernels for Function 1
 
-**Function 2** selected a point extremely close to its current best observation, with a distance of approximately **0.048**.
+I tested a Matérn kernel with ν = 2.5 to determine whether a different smoothness assumption could improve the GP model for Function 1.
 
-This suggested that the updated UCB model was focusing on an established promising region, despite the previous query failing to improve the maximum output.
+The RBF kernel assumes a very smooth underlying function, whereas the Matérn kernel allows greater flexibility in the smoothness of the relationships being modelled.
 
-**Functions 4, 5 and 7** also selected points relatively close to their current best observations, indicating a continued exploitation component following their successful first-round results.
+Both kernels converged to the same lower length-scale bound.
 
-In contrast, **Functions 6 and 8** selected more distant points.
+| Kernel | Fitted length scale |
+|---|---:|
+| RBF | 1e-05 |
+| Matérn (ν = 2.5) | 1e-05 |
 
-Function 6's proposed query was approximately **0.579** from its current best observation, while Function 8's was approximately **0.919** away.
+I then compared their predicted outputs and uncertainty across 100,000 candidate points.
 
-These larger distances suggested a greater exploratory element, although the selections were still based on UCB rather than deliberate maximum-distance exploration.
+| Kernel | Predicted output range | Uncertainty range |
+|---|---|---|
+| RBF | -0.0003278239 to -0.0000001931 | 0.0000355799 to 0.0010366701 |
+| Matérn | -0.0003278239 to -0.0000003215 | 0.0000459032 to 0.0010366701 |
 
-The comparison demonstrated that the same κ value could produce different behaviour depending on each model's predictions and uncertainty.
+The two models produced similar prediction and uncertainty ranges. Although there was some variation, neither kernel demonstrated a clear improvement in its ability to distinguish between unexplored regions.
 
-I therefore decided to retain **κ = 2.5** for this round rather than introduce function-specific exploration parameters without a clear reason to do so.
+This suggested that the modelling difficulty was not simply caused by the RBF kernel's smoothness assumptions. The available observations may not yet contain enough information for either model to represent the function effectively.
 
-### Step 6 — Select an Exploration Point for Function 1
+I therefore decided to continue using an exploration-focused strategy for Function 1 rather than relying on GP + UCB.
 
-As neither the RBF nor Matérn model provided sufficiently informative predictions for Function 1, I continued using the **distance-based exploration strategy** introduced in Week 1.
+### Step 4 — Generate candidate points and apply UCB
 
-For each of the 100,000 candidate points, I calculated its Euclidean distance to every existing observation.
+For Functions 2–8, I generated 100,000 candidate points per function and calculated the predicted output, uncertainty and UCB score using the updated RBF models.
 
-I then identified the distance to the nearest observation and selected the candidate with the greatest minimum distance.
+I retained κ = 2.5, allowing the acquisition function to balance exploitation of promising regions with exploration of uncertain areas.
 
-This approach prioritised a relatively unexplored region rather than relying on the GP's predicted output.
+The highest-scoring UCB candidates produced the following results:
 
-**Selected Function 1 Query**
+| Function | Predicted output | Uncertainty | UCB score |
+|---|---:|---:|---:|
+| 2 | 0.441071 | 0.190032 | 0.916151 |
+| 3 | -0.055801 | 0.074303 | 0.129955 |
+| 4 | -1.666506 | 0.886853 | 0.550627 |
+| 5 | 2112.903796 | 303.291367 | 2871.132212 |
+| 6 | -0.664546 | 0.355483 | 0.224161 |
+| 7 | 1.772966 | 0.240968 | 2.375386 |
+| 8 | 9.712587 | 0.462513 | 10.868871 |
+
+Functions 5 and 7 selected candidates with relatively strong predicted outputs following their successful first-round queries, suggesting that the models were continuing to identify promising regions.
+
+For Function 4, uncertainty contributed substantially to the selected candidate's UCB score, indicating a stronger exploratory element.
+
+Function 6 also produced a meaningful UCB selection following the improvement in its fitted RBF length scale. This was a change from Week 1, when its nearly constant predictions had made GP + UCB ineffective.
+
+### Step 5 — Assess exploration and exploitation
+
+I compared each UCB-selected query with the coordinates of its highest observed output, using Euclidean distance.
+
+This provided an indication of whether the selected points were concentrated around previously successful regions or explored more distant areas.
+
+| Function | Current best output | Distance from current best |
+|---|---:|---:|
+| 2 | 0.611205 | 0.0475 |
+| 3 | -0.020167 | 0.3171 |
+| 4 | -0.300645 | 0.1609 |
+| 5 | 2329.015854 | 0.1658 |
+| 6 | -0.714265 | 0.5785 |
+| 7 | 1.950612 | 0.2490 |
+| 8 | 9.821986 | 0.9190 |
+
+Function 2 selected a point particularly close to its current best observation, with a distance of approximately 0.048. Functions 4, 5 and 7 also remained relatively close to their best-known points, suggesting a greater exploitation component.
+
+Functions 6 and 8 selected more distant points, indicating greater exploration relative to their current best observations.
+
+However, distance alone does not determine whether a query is exploratory or exploitative. GP + UCB selects points based on predicted performance and uncertainty, so a more distant query may still have a strong predicted output.
+
+The results showed that the same κ value could produce different exploration–exploitation behaviour depending on the fitted model.
+
+I therefore retained κ = 2.5 rather than introduce function-specific values without a clear reason.
+
+### Step 6 — Select an exploration point for Function 1
+
+As neither RBF nor Matérn provided sufficiently informative predictions for Function 1, I continued with maximum-distance exploration.
+
+For each of the 100,000 candidate points, I calculated its Euclidean distance to the nearest existing observation and selected the candidate with the greatest minimum distance.
 
 | Measure | Result |
-|:--|:--|
-| **Selected Point** | `[0.99997255, 0.99984253]` |
-| **Distance to Nearest Observation** | 0.345641 |
+|---|---|
+| Selected point | `[0.99997255, 0.99984253]` |
+| Distance to nearest observation | 0.345641 |
 
-The selected point was located near the upper-right boundary of Function 1's two-dimensional search space.
+The selected point was near the upper-right boundary of the two-dimensional search space and was approximately 0.346 from its nearest existing observation.
 
-Its distance of approximately **0.346** from the nearest existing observation indicated that it represented a relatively poorly sampled region among the candidates tested.
+This approach deliberately prioritised exploration rather than exploitation because the GP models could not provide reliable guidance about which locations were likely to produce higher outputs.
 
-As the Gaussian Process models continued to provide limited guidance, I retained this point as an information-gathering query.
+Although this did not guarantee an immediate improvement, the new observation could help improve the model in subsequent rounds.
 
-The intention was to use the resulting observation to improve the dataset and reassess the model in subsequent rounds.
+### Step 7 — Validate the final proposed queries
 
-### Step 7 — Final Validation and Query Selection
+Before finalising the second-round queries, I checked that all selected coordinates were within the permitted input range of [0, 1] and that none duplicated an existing observation.
 
-Before finalising the second-round queries, I checked that all selected points were valid.
+Function 1's query was also confirmed as the maximum-distance candidate identified from its candidate set, while Functions 2–8 were selected using GP + UCB.
 
-The checks confirmed that:
+The final proposed queries were:
 
-- Every input coordinate was within the permitted range of **0 to 1**.
-- None of the proposed queries duplicated an existing observation.
-- Function 1's selected point was the maximum-distance candidate identified from its candidate set.
-- Functions 2–8 used the highest-UCB candidates selected from their updated RBF models.
+| Function | Selection method | Proposed query coordinates |
+|---|---|---|
+| 1 | Max-distance exploration | `[0.999973, 0.999843]` |
+| 2 | GP + UCB | `[0.655286, 0.929896]` |
+| 3 | GP + UCB | `[0.397530, 0.090477, 0.447319]` |
+| 4 | GP + UCB | `[0.480756, 0.474000, 0.229059, 0.429178]` |
+| 5 | GP + UCB | `[0.514842, 0.856105, 0.961506, 0.998492]` |
+| 6 | GP + UCB | `[0.246549, 0.344645, 0.479525, 0.733976, 0.025332]` |
+| 7 | GP + UCB | `[0.080334, 0.317465, 0.485517, 0.055569, 0.406883, 0.931976]` |
+| 8 | GP + UCB | `[0.078127, 0.668711, 0.054188, 0.209488, 0.863552, 0.717799, 0.074439, 0.866300]` |
 
-The final proposed query points were:
+All eight proposed queries passed the validation checks.
 
-| Function | Selection Method | Proposed Query Point |
-|:--|:--|:--|
-| **1** | Distance-based exploration | `[0.999973, 0.999843]` |
-| **2** | UCB | `[0.655286, 0.929896]` |
-| **3** | UCB | `[0.397530, 0.090477, 0.447319]` |
-| **4** | UCB | `[0.480756, 0.474000, 0.229059, 0.429178]` |
-| **5** | UCB | `[0.514842, 0.856105, 0.961506, 0.998492]` |
-| **6** | UCB | `[0.246549, 0.344645, 0.479525, 0.733976, 0.025332]` |
-| **7** | UCB | `[0.080334, 0.317465, 0.485517, 0.055569, 0.406883, 0.931976]` |
-| **8** | UCB | `[0.078127, 0.668711, 0.054188, 0.209488, 0.863552, 0.717799, 0.074439, 0.866300]` |
+## Weekly summary and next steps
 
-The final validation confirmed that all eight proposed queries were within bounds and did not duplicate any existing observations.
+Week 2 incorporated eight new observations, five of which improved the previous best outputs. Functions 4 and 5 showed particularly strong improvements, while Functions 3, 7 and 8 also achieved new maxima.
 
-The updated models also demonstrated different exploration–exploitation behaviour across the functions, supporting the decision to retain the existing UCB exploration parameter.
+The main methodological development was the change in Function 6's GP model. Its fitted RBF length scale increased substantially, allowing it to return to GP + UCB after using maximum-distance exploration in Week 1.
 
-The most important methodological development was the improvement in **Function 6's Gaussian Process**, allowing it to return to UCB after using distance-based exploration in Week 1.
+Function 1 continued to present difficulties. Testing a Matérn kernel did not provide a clear improvement over RBF, so maximum-distance exploration remained the preferred approach.
 
-Function 1 remained the exception, requiring further exploration because neither RBF nor Matérn had yet produced sufficiently informative predictions.
+The results also showed that retaining κ = 2.5 could produce different balances of exploration and exploitation across the functions without requiring individual parameter adjustments.
 
-## Week 2 Process Summary
+The next steps were to:
 
-The Week 2 optimisation process consisted of the following stages:
+- Submit the eight proposed query points and obtain their outputs.
+- Incorporate the returned observations into the datasets.
+- Refit the GP models and assess any further changes in their behaviour.
+- Continue investigating alternative modelling approaches if Function 1 remained difficult to model.
 
-1. **Evaluate Previous Queries:** Incorporated the eight returned observations and identified five new best outputs, including substantial improvements for Functions 4 and 5.
-2. **Refit Gaussian Processes:** Updated the RBF models and identified a significant improvement in Function 6's fitted length scale.
-3. **Investigate Alternative Kernels:** Compared RBF and Matérn for Function 1, finding that neither resolved the modelling difficulties.
-4. **Apply UCB:** Used 100,000 candidate points and UCB with κ = 2.5 to select queries for Functions 2–8.
-5. **Assess Exploration and Exploitation:** Compared proposed queries with current best observations to evaluate their relative positions in the search space.
-6. **Continue Targeted Exploration:** Selected a maximum-distance query for Function 1 to gather additional information.
-7. **Validate Final Queries:** Confirmed that all proposed points were within bounds and did not duplicate existing observations.
-
+Overall, Week 2 demonstrated the value of adapting the optimisation strategy to each function while maintaining a consistent GP + UCB approach wherever the models provided useful predictions.
