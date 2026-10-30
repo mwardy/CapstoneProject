@@ -1,410 +1,525 @@
 
-# Module 20 – Week 9: Bayesian Optimisation
+# Week 9 — Scaling the Observations and Refining Promising Regions
 
-## Methodology
+**Imperial College AI/ML Capstone Project | Module 20**
 
-Week 9 continued the Bayesian optimisation of eight unknown functions, incorporating the observations returned from Week 8. The approach remained based on Gaussian Process (GP) regression, Upper Confidence Bound (UCB), Expected Improvement (EI), and neural-network (NN) ensembles.
+## Objective
 
-The workflow comprised eight stages:
+The objective of Week 9 was to investigate how the optimisation process was progressing as additional observations accumulated, with particular attention to whether increasing dataset sizes were producing diminishing returns or changes in model reliability.
 
-1. Incorporate Week 8 observations and assess improvements and diminishing returns.
-2. Refit GP and NN surrogates and evaluate model reliability.
-3. Generate candidates using UCB and EI acquisition functions.
-4. Generate NN candidates and compare surrogate recommendations.
-5. Quantify GP–NN agreement.
-6. Evaluate neighbourhood evidence and investigate Functions 1 and 2 separately.
-7. Select function-specific candidates, including additional local refinement.
-8. Validate and format the final submissions.
+Previous rounds had demonstrated that the eight functions responded differently to additional observations. Some continued to achieve substantial improvements, while others appeared to be approaching stable high-performing regions.
 
-As in previous weeks, **100,000 candidate points per function** were evaluated. UCB was assessed at κ = 0.5, 1.0, 1.5 and 2.5, while EI used ξ = 0%, 1%, 5% and 10% of the observed output standard deviation. This expanded the acquisition comparison used in Week 8. Five-model NN ensembles provided alternative recommendations, with reliability assessed through leave-one-out cross-validation (LOOCV) against a mean-prediction baseline.
+This week therefore introduced a more systematic examination of optimisation progress, including running-best outputs and the magnitude of successive improvements.
 
-Candidate selection considered predicted performance, uncertainty, model reliability, agreement between surrogates, proximity to existing observations and recent optimisation results. Additional local searches were performed where appropriate, comparing search radii of 0.03, 0.05 and 0.10.
+The Gaussian Process (GP) and neural-network (NN) models were also reassessed to determine whether their predictive reliability was changing as the datasets increased.
 
----
+Final candidate selections continued to combine acquisition-function recommendations, model validation, historical performance and observed neighbourhood evidence, with greater emphasis on targeted local refinement where promising regions had already been established.
 
-## 1. Week 8 Results
+## 1. Incorporate and Assess the New Observations
 
-The eight Week 8 observations were incorporated and compared with the previous best output for each function.
+The outputs returned from the Week 8 queries were compared with the previous highest observed outputs before being incorporated into their respective datasets.
 
-| **Function** | **Previous best** | **Week 8 output** | **Improved?** |
-| ------------ | ----------------- | ----------------- | ------------- |
-| F1 | 0.000000 | 0.000000 | No |
-| F2 | 0.746962 | 0.657120 | No |
-| F3 | -0.010190 | -0.000863 | Yes |
-| F4 | 0.186912 | 0.387262 | Yes |
-| F5 | 8662.482500 | 8115.434723 | No |
-| F6 | -0.379740 | -0.274388 | Yes |
-| F7 | 2.929370 | 2.922059 | No |
-| F8 | 9.930811 | 9.957032 | Yes |
+| Function | Previous Best | New Output | Updated Best | Result |
+|---|---:|---:|---:|---|
+| 1 | 0.000000 | 0.000000 | 0.000000 | No improvement |
+| 2 | 0.746962 | 0.657120 | 0.746962 | No improvement |
+| 3 | -0.010190 | -0.000863 | -0.000863 | New best |
+| 4 | 0.186912 | 0.387262 | 0.387262 | New best |
+| 5 | 8662.482500 | 8115.434723 | 8662.482500 | No improvement |
+| 6 | -0.379740 | -0.274388 | -0.274388 | New best |
+| 7 | 2.929370 | 2.922059 | 2.929370 | No improvement |
+| 8 | 9.930811 | 9.957032 | 9.957032 | New best |
 
-**Four of the eight functions achieved new best outputs.**
+Four of the eight queries produced new best observations.
 
-F4 and F6 demonstrated particularly encouraging improvements. F4 increased from 0.186912 to 0.387262, while F6 improved from -0.379740 to -0.274388.
+**Function 4** achieved the largest improvement relative to its previous best, increasing from approximately 0.1869 to 0.3873. This provided further evidence that continued refinement of the recently identified high-performing region remained productive.
 
-F3 also improved, moving considerably closer to zero, while F8 reached a new best of 9.957032.
+**Function 3** improved from -0.010190 to -0.000863, moving substantially closer to zero. This continued its recent sequence of successful queries.
 
-F5 remained relatively close to its existing best of 8662.482500, returning 8115.434723 following the previous week's boundary refinement. F7 also remained close to its best, returning 2.922059 compared with 2.929370.
+**Function 6** improved from -0.379740 to -0.274388, representing another meaningful gain following earlier difficulties with its Gaussian Process.
 
-F2 produced a weaker result, while F1 again returned effectively zero despite continued exploration.
+**Function 8** achieved a smaller improvement, increasing from 9.930811 to 9.957032.
 
-These results supported continued refinement for F3, F4 and F6, while suggesting that F7 and F8 might be experiencing smaller incremental gains.
+The unsuccessful queries were also informative.
 
-### 1.1 Optimisation Progress and Diminishing Returns
+Function 7 returned 2.922059, only slightly below its existing best of 2.929370, indicating that the optimisation remained within a strong region despite not improving the maximum.
 
-Running-best outputs were examined to determine whether additional observations were continuing to produce improvements.
+Function 5 returned 8115.43 after moving slightly away from its previous boundary optimum of 8662.48. Although unsuccessful, the result provided additional evidence about the sensitivity of the objective near the upper boundary.
 
-| **Function** | **Observations** | **Current best** | **New bests recorded** |
-| ------------ | ---------------- | ---------------- | ---------------------- |
-| F1 | 18 | ~0.000000 | 3 |
-| F2 | 18 | 0.746962 | 3 |
-| F3 | 23 | -0.000863 | 8 |
-| F4 | 38 | 0.387262 | 11 |
-| F5 | 28 | 8662.482500 | 11 |
-| F6 | 28 | -0.274388 | 5 |
-| F7 | 38 | 2.929370 | 6 |
-| F8 | 48 | 9.957032 | 9 |
+Function 2 remained below its best, while Function 1's deliberate space-filling exploration again returned effectively zero.
 
-F3 and F4 demonstrated the strongest evidence of continued optimisation progress. F3 had achieved new bests across its four most recent observations, while F4 continued producing substantial improvements.
+Following these observations, the updated datasets contained between 18 observations for Functions 1 and 2 and 48 observations for Function 8.
 
-F5 had also shown strong progress, particularly during its more recent observations, although its latest query did not improve on the existing best.
+## 2. Assess Optimisation Progress as the Datasets Scale
 
-F6's recent improvements increased from approximately 0.001637 to 0.077134 and 0.105352, suggesting that its current region remained promising.
+As the datasets increased, the complete optimisation histories were examined to determine whether additional observations were continuing to produce meaningful improvements.
 
-F7 had not improved in its two latest observations, although its most recent result remained very close to its best.
+For each function, the running-best output was calculated and the number of improvements recorded.
 
-F8 showed the clearest evidence of diminishing returns. Recent improvements decreased from approximately 0.621928 to 0.223504, 0.089263 and 0.019562, followed by a slightly larger improvement of 0.026220.
+This provided an indication of how optimisation progress varied with dataset size and dimensionality.
 
-F2 showed intermittent progress rather than a consistent reduction in improvement size, while F1 remained effectively flat despite additional observations.
+### 2.1 Running-Best Performance
 
-Overall, the results did not demonstrate a uniform relationship between observation count and optimisation performance. Some functions continued improving substantially, while others appeared to be approaching regions of diminishing returns.
+| Function | Observations | Current Best | Number of New Bests | General Behaviour |
+|---|---:|---:|---:|---|
+| 1 | 18 | ~0.000000 | 3 | Effectively flat |
+| 2 | 18 | 0.746962 | 3 | Infrequent improvements |
+| 3 | 23 | -0.000863 | 8 | Strong recent progress |
+| 4 | 38 | 0.387262 | 11 | Continued substantial improvement |
+| 5 | 28 | 8662.482500 | 11 | Strong improvement near upper boundary |
+| 6 | 28 | -0.274388 | 5 | Intermittent but improving |
+| 7 | 38 | 2.929370 | 6 | Recent stability around best region |
+| 8 | 48 | 9.957032 | 9 | Continued but smaller gains |
 
----
+The running-best trajectories demonstrated that increasing the number of observations had not produced a uniform pattern across the functions.
 
-## 2. Surrogate Diagnostics
+**Functions 3 and 4** provided the clearest evidence of continued optimisation progress.
 
-### 2.1 Gaussian Process Models
+Function 3 had improved across its four most recent observations, while Function 4 continued to produce substantial gains and had moved from exclusively negative best outputs to a positive maximum.
 
-The GP models were refitted using the expanded datasets. Fitted RBF length scales and log marginal likelihoods were examined to identify potential modelling problems.
+Function 5 also demonstrated significant improvement across the optimisation history, particularly in its later observations. However, its latest query failed to improve the maximum, raising the question of whether the upper-boundary region was beginning to show diminishing returns.
 
-| **Function** | **RBF length scale** | **Log marginal likelihood** |
-| ------------ | -------------------- | --------------------------- |
-| F1 | 0.00001 | -25.540894 |
-| F2 | 0.00001 | -25.540894 |
-| F3 | 0.201 | -25.852938 |
-| F4 | 0.313 | -23.818726 |
-| F5 | 0.303 | -23.970400 |
-| F6 | 0.527 | -22.245983 |
-| F7 | 0.323 | -34.151061 |
-| F8 | 1.050 | -21.138922 |
+Function 7 appeared to be entering a more stable phase. Its recent observations remained close to the best but had not established further improvements.
 
-The most important finding was that **F1 and F2 continued to reach the GP length-scale lower bound of 1e-05**.
+**Function 8 showed the clearest indication of diminishing returns.** Its best output continued to increase, but the improvements were becoming relatively small as the observed maximum approached 10.
 
-Both functions had exhibited this behaviour in Week 8. The additional observations therefore did not resolve concerns about the GP models' ability to generalise between observations.
+Function 6 had improved intermittently, while Function 2 had produced relatively few improvements overall.
 
-The remaining GP length scales were comparatively stable. F4's length scale decreased from approximately 0.416 to 0.313, while F5 increased from 0.273 to 0.303.
+Function 1 remained unusual because its recorded best outputs were effectively zero, meaning that technically higher observations did not necessarily represent meaningful practical progress.
 
-F6 and F8 retained relatively large length scales, supporting continued use of their GP recommendations alongside other evidence.
+Overall, the results suggested that optimisation performance was highly function-specific rather than following a single scaling relationship.
 
-Overall, the results suggested that F3–F8 remained suitable for GP-based candidate evaluation, while F1 and F2 required greater caution.
+## 3. Examine the Magnitude of Recent Improvements
 
-### 2.2 Neural-Network Validation
+To investigate diminishing returns more directly, the size of each improvement in the running-best output was calculated.
 
-The five-model NN ensembles were retrained and evaluated using LOOCV.
+Absolute changes were preferred to percentage changes because several functions had negative outputs or crossed zero, making percentage improvements difficult to interpret consistently.
 
-| **Function** | **NN LOOCV MAE** | **Baseline MAE** | **Beats baseline?** |
-| ------------ | ---------------- | ---------------- | ------------------- |
-| F1 | 0.001837 | 0.000995 | No |
-| F2 | 0.236724 | 0.241635 | Yes |
-| F3 | 0.056881 | 0.053409 | No |
-| F4 | 1.385355 | 7.460801 | Yes |
-| F5 | 255.307417 | 2324.264043 | Yes |
-| F6 | 0.255144 | 0.530835 | Yes |
-| F7 | 0.443789 | 0.712291 | Yes |
-| F8 | 0.309128 | 0.981238 | Yes |
+### 3.1 Recent Improvement Patterns
 
-Six of the eight NN models outperformed the mean-prediction baseline.
+| Function | Recent Improvement Behaviour |
+|---|---|
+| 1 | Changes remain effectively zero |
+| 2 | Only two improvements after the initial best: 0.072209 and 0.135757 |
+| 3 | Latest gains increased to 0.005309 and 0.009327 |
+| 4 | Latest gains of 0.387342 and 0.200350 |
+| 5 | Recent successful improvements ranged from approximately 261.97 to 1834.48 |
+| 6 | Recent gains increased from 0.001637 to 0.077134 and 0.105352 |
+| 7 | Strong later gains, followed by two observations without improvement |
+| 8 | Generally declining improvement sizes, with latest gain of 0.026220 |
 
-F4, F5, F6, F7 and F8 demonstrated useful validation performance, supporting the use of their NN recommendations as additional evidence during candidate selection.
+The results reinforced the conclusion that diminishing returns were not consistent across all functions.
 
-F2 also passed validation, although narrowly. Its NN LOOCV MAE was 0.236724 compared with a baseline of 0.241635. This was particularly relevant because its GP remained unreliable.
+**Functions 3, 4 and 6** continued to generate meaningful improvements. In particular, recent gains in Functions 3 and 6 had increased rather than diminished.
 
-F1 and F3 again failed to outperform their baselines, so their NN predictions were given limited weight.
+Function 5 also continued to demonstrate substantial improvement over its recent history, although the latest query had failed to establish a new maximum.
 
-The NN architecture used two hidden layers of 50 neurons in Week 9, compared with 20 neurons in Weeks 7–8. Consequently, changes in validation performance between weeks cannot be attributed solely to additional observations. The LOOCV procedure also evaluates an individual NN fitting procedure rather than the complete five-model ensemble.
+Function 8 provided the strongest evidence of diminishing gains. Its improvement sizes had generally declined from 0.621928 to 0.223504, 0.089263 and 0.019562, before increasing slightly to 0.026220 in the latest round.
 
----
+Although this was not a perfectly consistent downward trend, the overall reduction in improvement magnitude was clear.
 
-## 3. GP Acquisition Candidates
+Function 7 may also have been approaching a more stable region, although two unsuccessful observations were insufficient to establish a definitive plateau.
 
-The refitted GP models were used to generate candidate points with UCB and EI.
+There was no clear evidence of a sudden emergence of new model capabilities simply because the datasets had grown. Any such conclusion would require supporting changes in predictive reliability or optimisation behaviour.
 
-Four UCB settings (κ = 0.5, 1.0, 1.5 and 2.5) and four EI settings (ξ = 0%, 1%, 5% and 10%) were compared. Each candidate was assessed using predicted output, uncertainty, acquisition behaviour and distance from existing observations.
+The next step was therefore to examine whether the surrogate models had become more informative with the additional observations.
 
-| **Function** | **Main GP findings** |
-| ------------ | -------------------- |
-| F1 | All acquisition settings selected [0.094177, 0.975622], although the GP remained unreliable. |
-| F2 | Low-κ UCB returned the existing Week 8 observation. Higher-κ UCB and EI selected [0.403694, 0.391789]. |
-| F3 | UCB κ=0.5 favoured local refinement, while higher exploration settings moved further from existing observations. |
-| F4 | UCB κ=0.5 predicted 0.736288, above the current best. Higher κ values increasingly favoured uncertainty. |
-| F5 | Low-κ UCB favoured the successful boundary region, while higher-exploration settings selected distant alternatives. |
-| F6 | Low-κ UCB predicted -0.248253, while EI ξ=0% predicted -0.220587, both above the current best. |
-| F7 | Low-κ UCB returned the existing best observation, while EI favoured a more exploratory alternative. |
-| F8 | UCB κ=0.5 predicted 9.967635, slightly above the current best, while higher κ values selected more exploratory candidates. |
+## 4. Refit and Evaluate the Surrogate Models
 
-The strongest evidence for local refinement came from F3, F4 and F6, where recent improvements supported continued exploitation of successful regions.
+The Gaussian Process and neural-network models were updated using the expanded datasets.
 
-F4 was particularly encouraging because its local UCB recommendation predicted a substantial improvement over the existing best of 0.387262.
+The existing modelling configurations were retained to ensure that changes in performance could be interpreted in the context of additional observations rather than unnecessary changes to the methodology.
 
-F5 again showed a pronounced distinction between exploitation and exploration. The higher-exploration GP candidate was approximately 0.6863 from its nearest observation but had a predicted output of only 1607.436, substantially below the existing best of 8662.482500.
+### 4.1 Gaussian Process Assessment
 
-F7's low-κ recommendation duplicated an existing observation, while F8's local recommendation predicted a smaller but potentially worthwhile improvement.
+The RBF Gaussian Processes were refitted and assessed using their optimised length scales, predicted outputs and uncertainty.
 
-For F1 and F2, acquisition results remained less reliable because their GP length scales had reached the lower bound.
+**Functions 1 and 2 remained problematic**, with their fitted length scales reaching the lower bound of `1e-05`.
 
-The results reinforced the importance of evaluating GP recommendations alongside surrogate validation and observed neighbourhood performance.
+For Function 1, this continued a longstanding issue, with the GP unable to provide convincing evidence of promising unexplored regions.
 
----
+Function 2 had developed a similar problem in the previous round. Although its model still produced some variation in predictions, its extremely short fitted length scale raised concerns about generalisation.
 
-## 4. Neural-Network Candidates
+The remaining functions produced more informative GP behaviour and continued to support acquisition-based candidate selection.
 
-The NN ensembles independently selected candidates from the same 100,000-point search spaces.
+The results demonstrated that adding observations did not automatically resolve surrogate modelling difficulties.
 
-Candidate selection used the highest ensemble mean prediction, with model disagreement and distance from existing observations recorded as supporting diagnostics.
+### 4.2 Neural-Network Cross-Validation
 
-| **Function** | **NN predicted output** | **NN disagreement** | **Nearest distance** |
-| ------------ | ----------------------- | ------------------- | -------------------- |
-| F1 | 0.001946 | 0.001331 | 0.182315 |
-| F2 | 0.831771 | 0.431009 | 0.106007 |
-| F3 | -0.001013 | 0.000717 | 0.018674 |
-| F4 | 0.173431 | 0.101814 | 0.032892 |
-| F5 | 8132.577652 | 837.663492 | 0.247618 |
-| F6 | -0.248980 | 0.042060 | 0.127622 |
-| F7 | 2.893229 | 0.055542 | 0.110492 |
-| F8 | 10.056825 | 0.027228 | 0.234486 |
+The neural-network ensembles were retrained using the updated observations.
 
-F2's NN selected `[0.702517, 0.009487]`, predicting 0.831771 compared with the existing best of 0.746962. However, disagreement between ensemble members was relatively high, limiting confidence in the prediction.
+As in previous rounds, Leave-One-Out Cross-Validation (LOOCV) was used to evaluate their generalisation performance.
 
-F4 and F7 favoured regions close to their established best observations, although their NN predictions remained below the current best values.
+The NN Mean Absolute Error (MAE) was compared with a simple mean-prediction baseline.
 
-F5 selected a candidate near the upper boundary, but model disagreement remained substantial. Its recommendation was therefore assessed alongside the stronger observed evidence around `[1,1,1,1]`.
+| Function | NN LOOCV MAE | Mean Baseline MAE | Beats Baseline |
+|---|---:|---:|---|
+| 1 | 0.001837 | 0.000995 | No |
+| 2 | 0.236724 | 0.241635 | Yes |
+| 3 | 0.056881 | 0.053409 | No |
+| 4 | 1.385355 | 7.460801 | Yes |
+| 5 | 255.307417 | 2324.264043 | Yes |
+| 6 | 0.255144 | 0.530835 | Yes |
+| 7 | 0.443789 | 0.712291 | Yes |
+| 8 | 0.309128 | 0.981238 | Yes |
 
-F6's NN predicted -0.248980, above the current best of -0.274388, with relatively low disagreement.
+The neural networks outperformed the baseline for **six of the eight functions**.
 
-F8's NN predicted 10.056825, above the current best of 9.957032, with low disagreement of 0.027228. This suggested that additional refinement might remain worthwhile despite smaller recent improvements.
+Functions 4 and 5 continued to show particularly strong relative validation performance, while Functions 6, 7 and 8 also demonstrated useful predictive structure.
 
-F1 and F3 predictions were given limited weight because their NNs failed LOOCV validation.
+Function 2 narrowly outperformed its baseline, with an MAE of 0.236724 compared with 0.241635.
 
----
+Although the advantage was small, this was important because Function 2's Gaussian Process remained unreliable. The neural network therefore continued to provide potentially useful alternative guidance.
 
-## 5. GP–NN Candidate Comparison
+Functions 1 and 3 failed to outperform their baselines.
 
-Euclidean distances were calculated between each NN recommendation and the GP acquisition candidates.
+Function 3 was particularly interesting because its optimisation performance had improved substantially despite its neural network continuing to fail validation.
 
-The closest GP candidate and corresponding distance were recorded for each function.
+This demonstrated that successful query selection did not necessarily indicate that every surrogate model was becoming more accurate.
 
-| **Function** | **Closest GP method** | **GP–NN distance** |
-| ------------ | --------------------- | ------------------ |
-| F1 | UCB κ=0.5 | 1.063404 |
-| F2 | UCB κ=1.5 | 0.485232 |
-| F3 | UCB κ=0.5 | 0.058180 |
-| F4 | UCB κ=0.5 | 0.129899 |
-| F5 | UCB κ=1.5 | 0.221396 |
-| F6 | EI ξ=0% | 0.193602 |
-| F7 | UCB κ=0.5 | 0.125569 |
-| F8 | UCB κ=0.5 | 0.243999 |
+Overall, the additional observations had not produced a sudden change in neural-network reliability. Model performance continued to vary substantially by function.
 
-F3, F4 and F7 demonstrated the closest agreement between surrogate recommendations.
+## 5. Compare GP Acquisition-Function Candidates
 
-F3 had the smallest distance, although its NN failed LOOCV, reducing confidence in the agreement.
+The updated GPs were used to evaluate 100,000 candidate points across the permitted `[0, 1]` search space.
 
-F4 and F7 showed relatively strong agreement around established high-performing regions, with both models favouring local refinement.
+The established acquisition comparison was retained:
 
-F5 and F6 demonstrated moderate agreement, while F8's NN remained reasonably close to the lower-exploration GP recommendation.
+- UCB with `κ = 0.5, 1.0, 1.5 and 2.5`.
+- Expected Improvement with `ξ = 0%, 1%, 5% and 10%` of each function's observed output standard deviation.
 
-F1 and F2 exhibited substantial disagreement. This was consistent with their GP reliability problems and supported investigating alternative selection approaches.
+The same settings as the previous round allowed changes in candidate behaviour to be assessed without introducing new acquisition parameters.
 
-**Cross-model agreement was treated as supporting evidence rather than proof of candidate quality.** Agreement was less informative where models failed validation or where recommended candidates were already observed.
+### 5.1 Key Acquisition-Function Findings
 
----
+**Function 1**
 
-## 6. Neighbourhood Evidence
+All UCB and EI settings selected the same candidate:
 
-The three nearest observed outputs to leading GP and NN candidates were examined to assess whether recommendations were supported by historical performance.
+`[0.094177, 0.975622]`
 
-| **Function** | **Neighbourhood findings** |
-| ------------ | -------------------------- |
-| F1 | Both GP and NN candidate regions had nearby outputs approximately equal to zero. |
-| F2 | NN region: 0.471844, 0.538996, 0.746962. Exploratory GP region: 0.214965, -0.013858, -0.065624. |
-| F3 | Local region: -0.000863, -0.010190, -0.016451. |
-| F4 | Local region: 0.387262, 0.186912. Exploratory GP region included -13.527649 and -10.069633. |
-| F5 | Boundary region: 8115.434723 and 8662.482500. Exploratory GP region included 109.571876, 233.223610 and 64.443440. |
-| F6 | Local region: -0.274388, -0.388687, -0.379740. |
-| F7 | Leading region: 2.922059, 2.929370, 2.536939. |
-| F8 | Leading region: 9.930811, 9.911249, 9.957032. |
+The GP predicted approximately -0.000529, with uncertainty of 0.001544.
 
-The strongest evidence for continued local refinement was in F3, F4, F5 and F6, where the best-performing regions had produced strong recent observations.
+However, this agreement was not considered reliable because the GP continued to reach the lower length-scale bound.
 
-F4's local candidates were surrounded by substantially better observed outputs than its exploratory GP alternatives.
+**Function 2**
 
-F5 showed an even clearer distinction. The established boundary region contained outputs above 8000, while the exploratory GP recommendation had nearby observations below 250.
+Low-κ UCB returned the previously submitted Week 8 point:
 
-F2's neighbourhood evidence favoured the NN recommendation over the exploratory GP candidate. This was particularly relevant because the NN passed LOOCV while the GP remained unreliable.
+`[0.697103, 0.994806]`
 
-F7's strong neighbourhood evidence supported local refinement, although the close proximity of observations to its best suggested that improvement might be increasingly difficult.
+Higher κ settings and EI selected a more exploratory candidate:
 
-For F8, both the NN and low-κ GP regions had strong nearby observations, supporting further refinement despite the smaller recent gains.
+`[0.403694, 0.391789]`
 
-F1 remained unresolved because neither surrogate's recommended region had meaningful supporting observations.
+The exploratory candidate had greater uncertainty but weaker surrounding historical performance.
 
-### 6.1 Additional Function 1 Investigation
+Given the GP's poor reliability, neither recommendation was accepted automatically.
 
-F1 continued to present the greatest modelling difficulty.
+**Function 3**
 
-Its GP length scale again reached the lower bound, its NN failed LOOCV, and the models disagreed substantially about the next query.
+Increasing κ produced progressively more exploratory candidates.
 
-Following the previous week's investigation of alternative kernels, a model-independent space-filling approach was retained.
+The κ = 0.5 candidate remained relatively close to the observed data, while κ = 2.5 selected a point substantially further away.
 
-A search across 100,000 points in the two-dimensional `[0,1]` search space identified regions furthest from existing observations.
+All EI settings selected the same candidate as UCB with κ = 1.5:
 
-The selected candidate was:
+`[0.779394, 0.644459, 0.001936]`
+
+However, the latest successful observations provided a reason to favour more conservative local refinement.
+
+**Function 4**
+
+UCB with κ = 0.5 produced a strong predicted output of approximately 0.736288.
+
+Increasing κ placed progressively greater emphasis on exploration, with κ = 2.5 selecting a much more distant point with a predicted output of approximately -9.678100.
+
+This provided little reason to abandon the recently successful region.
+
+**Function 5**
+
+Lower-κ UCB continued to favour the established upper-boundary region.
+
+Higher κ settings selected more exploratory candidates, but these were substantially further from the strongest observations.
+
+Given the repeated success around the upper boundary, local refinement remained preferable.
+
+**Function 6**
+
+The acquisition comparison supported continued investigation around the current high-performing region.
+
+More exploratory candidates were also considered, but their surrounding observations generally provided weaker evidence than those supporting local refinement.
+
+**Function 7**
+
+Low-κ UCB effectively returned the existing best observation.
+
+This confirmed that the surrogate model continued to identify a promising region, but a novel candidate would be needed before submission.
+
+**Function 8**
+
+More exploitative acquisition settings remained close to the strongest observed region.
+
+Higher-κ recommendations became substantially more exploratory, despite the latest observation producing another new best.
+
+The recent pattern of small improvements suggested that continued targeted refinement was more appropriate than an unsupported move into a distant region.
+
+Overall, the acquisition analysis favoured relatively local selections for most functions, with Functions 1 and 2 requiring separate consideration because of their GP reliability issues.
+
+## 6. Compare Neural-Network and GP Recommendations
+
+The neural-network ensembles were used to generate alternative candidate recommendations.
+
+These were compared with the GP acquisition selections, considering predicted outputs, model disagreement, candidate locations and evidence from nearby observations.
+
+### 6.1 Model Agreement and Reliability
+
+**Function 1**
+
+The GP and NN identified different regions, but neither surrogate had sufficiently strong validation evidence.
+
+This supported retaining model-independent exploration.
+
+**Function 2**
+
+The NN continued to identify a region associated with stronger observations than the exploratory GP alternative.
+
+Its LOOCV performance was only marginally better than the baseline, so the recommendation still required caution. Nevertheless, it provided stronger evidence than the unreliable GP.
+
+**Function 3**
+
+The NN and lower-κ GP candidates remained close to the latest high-performing region.
+
+However, because the NN failed LOOCV, its prediction was treated as supporting evidence rather than a primary basis for selection.
+
+**Function 4**
+
+Both GP and NN recommendations remained associated with the recently successful region.
+
+The latest substantial improvement and strong NN validation supported further local refinement.
+
+**Function 5**
+
+Both surrogate approaches continued to favour the upper-boundary region.
+
+More exploratory GP candidates had weaker historical support, making local boundary refinement the preferred strategy.
+
+**Function 6**
+
+Both models identified promising regions near the latest best observation.
+
+The recent improvement suggested that slightly broader local refinement could be justified, provided it remained supported by model predictions and historical observations.
+
+**Function 7**
+
+Both surrogate approaches continued to identify the established high-performing region.
+
+However, the leading GP recommendation duplicated an existing observation, requiring a new candidate to be selected nearby.
+
+**Function 8**
+
+Both models continued to identify candidates near the highest-performing observations.
+
+The neural network predicted a potential improvement and demonstrated relatively low ensemble disagreement, supporting further local refinement despite the smaller gains recorded recently.
+
+## 7. Assess Candidate Neighbourhoods
+
+The nearest existing observations to each model recommendation were examined to determine whether predicted performance was supported by actual historical results.
+
+The analysis compared neural-network candidates with low- and high-κ GP candidates.
+
+### 7.1 Neighbourhood Findings
+
+| Function | Main Finding |
+|---|---|
+| 1 | Neither surrogate region has convincing support; outputs remain effectively zero |
+| 2 | NN candidate located near stronger observations than exploratory GP candidate |
+| 3 | NN and low-κ GP candidates close to recent best observations |
+| 4 | Local candidates supported by recent outputs of 0.387262 and 0.186912 |
+| 5 | Local upper-boundary region contains outputs above 8000; exploratory GP region much weaker |
+| 6 | Local candidates supported by recent best of -0.274388 |
+| 7 | Strong local region identified, but leading GP candidate duplicates existing best |
+| 8 | NN and low-κ GP candidates supported by the strongest observed neighbourhood |
+
+The neighbourhood evidence strongly favoured locally focused optimisation for Functions 2–8.
+
+**Function 2** provided a clear example of why surrogate reliability and observed results needed to be considered together.
+
+Its neural-network candidate was close to observations producing 0.471844, 0.538996 and the current best of 0.746962.
+
+In contrast, the exploratory GP candidate was surrounded by considerably weaker outputs of 0.214965, -0.013858 and -0.065624.
+
+The NN-supported region therefore appeared more promising.
+
+**Function 4** also favoured local refinement. Its latest two best observations were 0.186912 and 0.387262, while more exploratory candidates were associated with substantially weaker previous results.
+
+**Function 5** demonstrated an even more pronounced difference. The local region contained outputs above 8000, while the exploratory GP candidate was associated with nearby outputs of only approximately 64–233.
+
+There was therefore little empirical evidence supporting a substantial move away from the upper boundary.
+
+**Function 6** favoured continued refinement around its recently improved region, although the combination of GP and NN support suggested that somewhat broader local exploration might be justified.
+
+**Function 7** remained concentrated around a clearly successful region, but a new point was required to avoid duplication.
+
+**Function 8** also favoured local refinement. Although recent gains were becoming smaller, both surrogate models continued to identify candidates associated with its strongest observations.
+
+Function 3 similarly favoured local refinement despite its NN failing LOOCV, because its GP and observed data independently supported the recently successful area.
+
+Function 1 remained the main exception. Neither model could reliably distinguish between candidate regions, and observed neighbourhoods offered little useful evidence.
+
+Overall, the neighbourhood comparison reinforced the conclusion that Functions 2–8 should primarily focus on exploitation or controlled local refinement, while Function 1 remained better suited to space-filling exploration.
+
+## 8. Function-Specific Local Refinement
+
+For functions with established high-performing regions, additional candidates were generated near the current best observations.
+
+This was particularly important where leading model recommendations duplicated existing observations or where further local optimisation was supported by recent improvements.
+
+Different local search radii were considered, allowing the trade-off between predicted performance and candidate novelty to be assessed.
+
+### 8.1 Final Strategy by Function
+
+| Function | Strategy | Main Reasoning |
+|---|---|---|
+| 1 | Space-filling exploration | GP and NN remain unreliable |
+| 2 | NN-supported refinement | Stronger neighbourhood evidence than GP |
+| 3 | Fine local refinement | Repeated recent improvements near current best |
+| 4 | Fine local refinement | Strong recent gains and cross-model support |
+| 5 | Boundary refinement with novelty constraint | Best outputs concentrated near upper boundary |
+| 6 | Broader local refinement | Recent improvement and positive GP/NN predictions |
+| 7 | Conservative local refinement | Stable high-performing region; avoid duplication |
+| 8 | Broader local refinement | Continued improvement despite diminishing gains |
+
+### 8.2 Important Local Search Decisions
+
+**Function 1 — Space-Filling Exploration**
+
+Because neither surrogate provided reliable guidance, the candidate with the greatest distance from existing observations was selected.
+
+Final candidate:
 
 `[0.682178, 0.001903]`
 
-Its nearest-observation distance was approximately **0.306754**, while the second and third nearest observations were approximately 0.308314 and 0.316118 away.
+The distance to its nearest existing observation was approximately 0.306755.
 
-This was substantially more novel than the recommendations from the GP and NN models.
+This remained a deliberate exploration-focused selection.
 
-**[0.682178, 0.001903] was selected primarily because it increased coverage of the search space.**
+**Function 2 — NN-Supported Refinement**
 
-This represented deliberate exploration rather than an expectation that the selected point would outperform the existing best.
+The neural network and observed neighbourhood evidence favoured continued investigation near stronger historical observations.
 
-### 6.2 Additional Function 2 Investigation
+Final candidate:
 
-F2 also required a separate approach because its GP remained unreliable while its NN continued to outperform the LOOCV baseline.
+`[0.704305, 0.038527]`
 
-NN-based local searches were performed around the current best using radii of 0.03, 0.05 and 0.10.
+The candidate was approximately 0.077676 from its nearest observation, allowing some exploration without relying on the poorly fitted GP.
 
-| **Radius** | **Candidate** | **NN prediction** | **NN disagreement** | **Nearest distance** |
-| ---------- | ------------- | ----------------- | ------------------- | -------------------- |
-| 0.03 | [0.711375, 0.108192] | 0.718309 | 0.149730 | 0.018533 |
-| 0.05 | [0.710141, 0.088175] | 0.743700 | 0.211086 | 0.030706 |
-| 0.10 | [0.704305, 0.038527] | 0.810157 | 0.363055 | 0.077676 |
+**Function 3 — Fine Local Refinement**
 
-The larger search radius produced the strongest predicted output, although NN disagreement also increased.
+The recent sequence of improvements justified remaining close to the latest successful region.
 
-The 0.03 candidate had relatively low disagreement but was predicted below the existing best. The 0.05 candidate was predicted approximately equal to the best.
-
-The 0.10 candidate predicted 0.810157, above the existing best of 0.746962, while providing greater novelty.
-
-**[0.704305, 0.038527] was selected as the most promising NN-supported refinement candidate**, acknowledging the increased model disagreement.
-
----
-
-## 7. Final Candidate Selection
-
-The final selections combined recent optimisation performance, GP and NN reliability, acquisition results, model agreement, neighbourhood evidence and candidate novelty.
-
-Additional local searches were performed for F3–F8 because their strongest recommendations were concentrated around existing high-performing observations.
-
-For each function, 50,000 candidates were evaluated at radii of 0.03, 0.05 and 0.10 around the current best. GP and NN predictions were standardised and combined to compare local alternatives.
-
-| **Function** | **Selected approach** | **Reasoning** |
-| ------------ | --------------------- | ------------- |
-| F1 | Space-filling exploration | Both surrogates unreliable; continued model-independent exploration. |
-| F2 | NN-supported refinement | GP unreliable; NN passed LOOCV and had stronger neighbourhood evidence. |
-| F3 | Local refinement | Recent improvement and strong GP support; NN failed validation. |
-| F4 | Local refinement | Substantial recent improvement and strong predictions around the successful region. |
-| F5 | Boundary refinement | Strong observed performance near [1,1,1,1], requiring a novelty constraint. |
-| F6 | Broader local refinement | GP and validated NN both predicted improvement. |
-| F7 | Conservative local refinement | Strong nearby observations but increasing disagreement further from the best. |
-| F8 | Broader local refinement | Both surrogates predicted improvement despite diminishing recent gains. |
-
-### 7.1 Additional Local Refinement
-
-For F3, radius 0.03 identified:
+Final candidate:
 
 `[0.473523, 0.500295, 0.456235]`
 
-The GP predicted approximately -0.000166, slightly above the current best of -0.000863. The candidate remained close to the strongest observed region, with a nearest-observation distance of approximately 0.010539.
+Its nearest-observation distance of approximately 0.010539 reflected a highly local refinement strategy.
 
-For F4, radius 0.05 identified:
+**Function 4 — Fine Local Refinement**
+
+The recent substantial improvement supported further exploitation of the same region.
+
+Final candidate:
 
 `[0.388825, 0.366595, 0.350533, 0.420635]`
 
-The GP predicted 0.563957, above the current best of 0.387262. The local searches consistently favoured the same region, supporting continued refinement.
+The nearest-observation distance was approximately 0.016260.
 
-For F6, radius 0.10 identified:
+**Function 5 — Boundary Refinement**
 
-`[0.440497, 0.372759, 0.525613, 0.791828, 0.000000]`
+The upper-boundary region continued to provide the strongest historical results.
 
-The GP and NN predicted approximately -0.195871 and -0.229762 respectively, both above the current best of -0.274388. The candidate was approximately 0.110780 from its nearest observation.
+A minimum novelty constraint was retained to prevent selection of an effectively duplicate point.
 
-For F7, radius 0.03 identified:
-
-`[0.199451, 0.330731, 0.460263, 0.255214, 0.346569, 0.603374]`
-
-The NN predicted approximately 2.985400, above the current best of 2.929370. Larger-radius searches increased NN optimism but also disagreement, supporting the more conservative selection.
-
-For F8, radius 0.10 identified:
-
-`[0.031565, 0.175185, 0.160043, 0.130670, 0.742356, 0.487463, 0.194164, 0.622246]`
-
-The GP and NN predicted approximately 9.976275 and 10.009696, both above the current best of 9.957032.
-
-The candidate was approximately 0.190714 from its nearest observation, providing greater novelty while remaining in a promising region.
-
-### 7.2 Function 5 Novelty Constraint
-
-For F5, the initial local searches repeatedly selected points almost identical to the existing best observation `[1,1,1,1]`.
-
-Although technically novel, these candidates were approximately 0.0001 from an existing observation and therefore offered limited additional information.
-
-Minimum nearest-observation distances of 0.03, 0.05 and 0.10 were compared.
-
-| **Minimum novelty** | **GP prediction** | **NN prediction** | **NN disagreement** |
-| ------------------- | ----------------- | ----------------- | ------------------- |
-| 0.03 | 8287.623 | 8688.604 | 118.483 |
-| 0.05 | 8001.755 | 8710.650 | 197.197 |
-| 0.10 | 7187.507 | 8743.780 | 369.571 |
-
-The NN became increasingly optimistic at larger distances, but GP predictions deteriorated while uncertainty and NN disagreement increased substantially.
-
-The minimum novelty distance of **0.03** provided the best compromise between maintaining the successful boundary strategy and gathering meaningful additional information.
-
-The resulting candidate was:
+Final candidate:
 
 `[1.000000, 0.969998, 1.000000, 1.000000]`
 
-### 7.3 Final Selections
+The point was approximately 0.030002 from its nearest observation.
 
-| **Function** | **Final candidate** | **Selection rationale** |
-| ------------ | ------------------- | ----------------------- |
-| F1 | [0.682178, 0.001903] | Space-filling exploration where surrogates remain unreliable. |
-| F2 | [0.704305, 0.038527] | NN-supported local refinement with greater novelty. |
-| F3 | [0.473523, 0.500295, 0.456235] | Conservative refinement following a new best. |
-| F4 | [0.388825, 0.366595, 0.350533, 0.420635] | Strong GP prediction in the successful local region. |
-| F5 | [1.000000, 0.969998, 1.000000, 1.000000] | Boundary refinement with a 0.03 novelty constraint. |
-| F6 | [0.440497, 0.372759, 0.525613, 0.791828, 0.000000] | Both surrogates predicted improvement at radius 0.10. |
-| F7 | [0.199451, 0.330731, 0.460263, 0.255214, 0.346569, 0.603374] | Conservative local refinement with controlled disagreement. |
-| F8 | [0.031565, 0.175185, 0.160043, 0.130670, 0.742356, 0.487463, 0.194164, 0.622246] | Broader local refinement supported by both surrogates. |
+**Function 6 — Broader Local Refinement**
 
----
+Increasing the local search radius produced more optimistic predictions from both surrogate models.
 
-## 8. Validation and Submission
+At a radius of 0.10, the GP predicted approximately -0.195871 and the NN approximately -0.229762, both above the current best of -0.274388.
 
-The final candidates were checked for:
+Final candidate:
 
-- Correct dimensionality for each function.
-- Input values within the permitted `[0,1]` bounds.
-- No duplicate observations.
-- Distance from existing observations.
-- Consistent formatting to six decimal places.
+`[0.440497, 0.372759, 0.525613, 0.791828, 0.000000]`
 
-All eight candidates passed the validation checks.
+Its nearest-observation distance was approximately 0.110780.
 
-Nearest-observation distances ranged from approximately 0.010539 for F3 to 0.306755 for F1, reflecting the different exploitation and exploration strategies.
+This represented a broader local move supported by both models rather than an unrestricted exploratory query.
 
-### Final Week 9 Submission Points
+**Function 7 — Conservative Local Refinement**
+
+The more exploratory alternatives offered higher NN predictions but also increased disagreement and weaker GP support.
+
+A smaller local search radius was therefore preferred.
+
+Final candidate:
+
+`[0.199451, 0.330731, 0.460263, 0.255214, 0.346569, 0.603374]`
+
+The NN predicted approximately 2.985400, above the current best of 2.929370.
+
+The nearest-observation distance was approximately 0.039502.
+
+**Function 8 — Broader Local Refinement**
+
+Although recent gains were diminishing, the latest query had established another new best.
+
+A broader local candidate was supported by both models, with GP and NN predicted outputs of approximately 9.976275 and 10.009696 respectively.
+
+Both exceeded the existing best of 9.957032.
+
+Final candidate:
+
+`[0.031565, 0.175185, 0.160043, 0.130670, 0.742356, 0.487463, 0.194164, 0.622246]`
+
+The nearest-observation distance was approximately 0.190714.
+
+This provided greater novelty while remaining within a locally supported region.
+
+## 9. Final Week 9 Query Selections
+
+The selected candidates were rounded to six decimal places and checked against the updated datasets.
+
+Each candidate was validated for dimensionality, permitted input bounds and duplication against existing observations.
+
+### Final Proposed Queries
+
+| Function | Final Proposed Point | Nearest Observation Distance |
+|---|---|---:|
+| 1 | `[0.682178, 0.001903]` | 0.306755 |
+| 2 | `[0.704305, 0.038527]` | 0.077676 |
+| 3 | `[0.473523, 0.500295, 0.456235]` | 0.010539 |
+| 4 | `[0.388825, 0.366595, 0.350533, 0.420635]` | 0.016260 |
+| 5 | `[1.000000, 0.969998, 1.000000, 1.000000]` | 0.030002 |
+| 6 | `[0.440497, 0.372759, 0.525613, 0.791828, 0.000000]` | 0.110780 |
+| 7 | `[0.199451, 0.330731, 0.460263, 0.255214, 0.346569, 0.603374]` | 0.039502 |
+| 8 | `[0.031565, 0.175185, 0.160043, 0.130670, 0.742356, 0.487463, 0.194164, 0.622246]` | 0.190714 |
+
+All eight candidates passed the saved validation checks.
+
+Every point had the correct dimensionality, remained within the `[0, 1]` input space and was distinct from all existing observations.
+
+The nearest-observation distances reflected the different optimisation strategies.
+
+Functions 3, 4, 5 and 7 remained relatively close to successful observations, while Functions 6 and 8 made broader local moves.
+
+Function 2 provided an intermediate case, while Function 1 remained the most exploratory selection.
+
+### Submission Format
 
     Function 1: 0.682178-0.001903
     Function 2: 0.704305-0.038527
@@ -415,29 +530,36 @@ Nearest-observation distances ranged from approximately 0.010539 for F3 to 0.306
     Function 7: 0.199451-0.330731-0.460263-0.255214-0.346569-0.603374
     Function 8: 0.031565-0.175185-0.160043-0.130670-0.742356-0.487463-0.194164-0.622246
 
-These points match the final selections recorded in the original Week 9 draft.
+## 10. Week 9 Reflection
 
-**Reproducibility limitation:** A separate execution of the NN refinement produced a slightly different F2 candidate, `[0.701892, 0.038659]`, rather than `[0.704305, 0.038527]`. The cause of this difference has not been established. The original submission has been retained, but its exact reproduction remains unresolved.
+Week 9 demonstrated that increasing the number of observations did not produce a uniform pattern of optimisation progress across the eight functions.
+
+Four of the latest queries improved the observed maxima, with particularly encouraging results for Functions 3, 4 and 6.
+
+The scaling analysis showed that Functions 3 and 4 continued to improve strongly, while Function 6 had also achieved increasingly meaningful gains after its earlier modelling difficulties.
+
+Function 5 retained a strong high-performing region around the upper boundary, although the latest query failed to improve its maximum.
+
+Function 8 provided the clearest evidence of diminishing returns. Its recent improvements had become smaller, but the continued identification of new best observations suggested that local refinement remained worthwhile.
+
+Function 7 also appeared to be approaching a more stable region, although its latest result remained very close to the best.
+
+The surrogate-model analysis reinforced the importance of assessing reliability separately for each function. Functions 1 and 2 continued to experience Gaussian Process difficulties, while the neural networks outperformed their mean-prediction baselines for six functions.
+
+However, the additional observations had not produced a sudden improvement in model reliability or clear evidence of emergent behaviour.
+
+The candidate neighbourhood analysis provided strong support for local refinement across Functions 2–8. Model recommendations were considered alongside actual historical observations, helping to distinguish promising candidates from exploratory suggestions with little empirical support.
+
+The final selections reflected this evidence. Functions 3, 4, 5 and 7 favoured relatively conservative refinement, while Functions 6 and 8 justified broader local moves supported by both surrogate models.
+
+Function 1 continued to use model-independent space-filling exploration because neither GP nor NN modelling provided sufficiently reliable guidance.
+
+Overall, Week 9 introduced a more systematic assessment of scaling and diminishing returns while reinforcing the value of function-specific optimisation decisions.
+
+The following round will evaluate whether the selected refinements produce further improvements and whether changes in prediction accuracy provide additional evidence about surrogate reliability as the datasets grow.
 
 ---
 
-## Reflection
+**Associated code:** `Week_09.ipynb`
 
-Week 9 demonstrated the importance of assessing optimisation progress alongside surrogate reliability and the performance of previous observations.
-
-The additional running-best and improvement-size analysis showed that increasing the number of observations did not produce consistent results across all functions. F3, F4 and F6 continued improving, while F8 showed clearer evidence of diminishing returns as its best output approached 10. F7 also remained near its best without achieving a further improvement.
-
-The strongest evidence supported continued local refinement for F3, F4, F6 and F8, where recent improvements, strong nearby observations and model predictions suggested that further progress remained possible.
-
-F5 again illustrated the importance of novelty constraints. The initial local searches repeatedly returned candidates almost identical to the existing best. Imposing a minimum distance of 0.03 provided a more informative query while maintaining the successful boundary-focused strategy.
-
-F1 continued to require a different approach. Both surrogates remained unreliable, and the earlier investigation of alternative GP kernels had not resolved the problem. Space-filling exploration therefore remained preferable to relying on uncertain predictions.
-
-F2 also illustrated the value and limitations of NN-supported selection. Its GP remained unreliable while its NN narrowly outperformed the validation baseline. The NN identified a potentially promising region, although disagreement increased as the local search moved further from the existing best. The difference observed when reproducing the F2 refinement also highlights the importance of checking computational reproducibility.
-
-More generally, the results reinforced that cross-model agreement can strengthen confidence in a region but does not guarantee improvement. Model reliability, neighbourhood evidence and candidate novelty remained important considerations.
-
-One methodological limitation is that the NN architecture changed from two hidden layers of 20 neurons in Weeks 7–8 to 50 neurons in Week 9. Consequently, differences in NN performance cannot be attributed solely to the increased number of observations.
-
-Overall, Week 9 strengthened the function-specific optimisation process by incorporating diminishing-returns analysis and comparing multiple local-search radii. The final selections balanced predicted improvement, model validation, neighbourhood evidence and novelty, while retaining alternative exploration strategies where surrogate predictions were least reliable.
 
