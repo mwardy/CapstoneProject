@@ -1,1 +1,793 @@
 
+# Week 13 — Final-Round Optimisation and Performance Evaluation
+
+**Imperial College AI/ML Capstone Project | Module 24**
+
+## Objective
+
+The objective of Week 13 was to conduct the final optimisation analysis, evaluate the effectiveness of the methods used throughout the project and select the final candidate points for the eight unknown functions.
+
+Previous rounds had developed from a relatively simple Gaussian Process (GP) and Upper Confidence Bound (UCB) approach into a function-specific optimisation framework incorporating neural-network (NN) ensembles, cross-validation, acquisition-function comparisons, realised prediction accuracy, local refinement, K-Means clustering and Principal Component Analysis (PCA).
+
+The final week focused on bringing these approaches together rather than introducing an entirely new optimisation method.
+
+Particular attention was given to identifying which surrogate models had demonstrated the greatest reliability for each function and assessing whether the final candidates offered a realistic opportunity to improve upon existing observations.
+
+Probability of Improvement (PI) and Expected Improvement (EI) were also used to reassess the selected candidates, placing greater emphasis on potential improvement as the remaining query budget approached its conclusion.
+
+Finally, the complete optimisation history was reviewed to assess overall performance and reflect on the exploration–exploitation trade-off and its relationship to sequential decision-making.
+
+## 1. Incorporate and Assess the Round 13 Results
+
+The outputs received from the previous round were compared with the existing best observations.
+
+These observations were incorporated into the datasets before updating the surrogate models.
+
+| Function | Previous Best | New Output | Updated Best | New Best? |
+|---|---:|---:|---:|---|
+| 1 | ~0.000000 | ~0.000000 | ~0.000000 | No |
+| 2 | 0.746962 | 0.682038 | 0.746962 | No |
+| 3 | -0.000352 | -0.006038 | -0.000352 | No |
+| 4 | 0.622950 | 0.061505 | 0.622950 | No |
+| 5 | 8662.482500 | 8028.386894 | 8662.482500 | No |
+| 6 | -0.239769 | -0.305529 | -0.239769 | No |
+| 7 | 3.070097 | 2.951245 | 3.070097 | No |
+| 8 | 9.987419 | 9.983162 | 9.987419 | No |
+
+**None of the eight Round 13 queries produced a new best observation.**
+
+However, the results varied considerably between functions.
+
+**Function 2** returned approximately 0.6820, relatively close to its established maximum of 0.7470. This suggested that the NN-supported region continued to contain reasonably strong outputs, although it had not produced a further improvement.
+
+**Function 3** deteriorated from its best of -0.000352 to -0.006038. Given its previous difficulties with surrogate reliability, this reinforced the importance of avoiding overly optimistic predictions when moving away from the strongest existing observations.
+
+**Function 4** recorded one of the largest deteriorations relative to its best, returning only 0.0615 compared with 0.6229. This indicated that performance could change substantially within its locally promising region.
+
+**Function 5** returned approximately 8028.39, again below its upper-boundary maximum of 8662.48. The result provided further evidence that even relatively small movements away from the best-known boundary point could reduce performance.
+
+**Function 6** declined to -0.3055, suggesting that the previous broader refinement had not improved upon the best of -0.2398.
+
+**Function 7** returned approximately 2.9512, remaining within a reasonably strong region but below its maximum of 3.0701.
+
+**Function 8** returned approximately 9.9832, very close to its best of 9.9874. Although no further improvement was recorded, the result suggested that the search remained concentrated within a highly promising region.
+
+Function 1 continued to return outputs effectively equal to zero.
+
+Overall, the results supported a more conservative approach to the final candidate selections, particularly where recent movements had failed to improve upon established maxima.
+
+## 2. Review Realised Model Prediction Accuracy
+
+The GP and NN predictions made before the Round 13 submissions were compared with the actual outputs received.
+
+Absolute prediction error was calculated as:
+
+    Absolute Error = |Predicted Output - Actual Output|
+
+This provided another out-of-sample assessment of surrogate reliability, supplementing the cross-validation results.
+
+### 2.1 Prediction Error Comparison
+
+| Function | GP Absolute Error | NN Absolute Error | More Accurate Model |
+|---|---:|---:|---|
+| 1 | — | — | Not applicable |
+| 2 | 0.306901 | 0.013371 | NN |
+| 3 | 0.013808 | 0.006492 | NN |
+| 4 | 0.727793 | 0.340685 | NN |
+| 5 | 25.890809 | 43.804895 | GP |
+| 6 | 0.119462 | 0.040336 | NN |
+| 7 | 0.093765 | 0.224310 | GP |
+| 8 | 0.014017 | 0.127873 | GP |
+
+Function 1 was excluded because model predictions were not recorded for its previous exploratory query.
+
+The neural network was more accurate for four of the seven directly comparable functions, while the GP was more accurate for three.
+
+### 2.2 Interpretation
+
+**Function 2**
+
+The NN achieved an absolute error of only 0.0134, compared with 0.3069 for the GP.
+
+This was a substantial difference and supported greater reliance on the NN for local predictions, even though its performance had varied across previous rounds.
+
+**Function 3**
+
+The NN was again more accurate, with an error of 0.0065 compared with 0.0138 for the GP.
+
+However, both models had predicted outputs above the actual result, reinforcing the difficulty of predicting performance close to zero.
+
+**Function 4**
+
+Both models substantially overpredicted the latest outcome.
+
+The GP predicted approximately 0.7893, compared with an actual output of only 0.0615.
+
+The NN was more accurate but still had a substantial error of approximately 0.3407.
+
+This result suggested that neither surrogate should be trusted without considering model agreement, local observations and uncertainty.
+
+**Function 5**
+
+The GP produced the more accurate prediction, with an error of approximately 25.89.
+
+Relative to the output scale of more than 8000, this was comparatively small.
+
+Both models continued to provide useful guidance around the upper-boundary region.
+
+**Function 6**
+
+The NN performed more accurately, with an error of approximately 0.0403 compared with 0.1195 for the GP.
+
+This supported retaining the NN as an important contributor to candidate selection.
+
+**Function 7**
+
+The GP was more accurate, producing an error of approximately 0.0938 compared with 0.2243 for the NN.
+
+This reinforced the case for greater GP influence.
+
+**Function 8**
+
+The GP was substantially more accurate, with an error of only 0.0140 compared with 0.1279 for the NN.
+
+Given that Function 8 already had a best output close to 10, avoiding overoptimistic predictions was particularly important.
+
+### 2.3 Overall Assessment
+
+There was no single surrogate that consistently performed best across all eight functions.
+
+The results supported using the NN more heavily for Functions 2, 3 and 6, while giving greater consideration to GP predictions for Functions 5, 7 and 8.
+
+Function 4 required particular caution because both models had substantially overestimated the latest observation.
+
+This reinforced one of the central findings of the project: model reliability should be assessed separately for each function, rather than assuming that one modelling approach is universally superior.
+
+## 3. Final GP and Neural-Network Diagnostics
+
+The surrogate models were refitted using the complete datasets available at the beginning of Week 13.
+
+This final diagnostic stage used a Gaussian Process with a Matérn kernel and WhiteKernel noise component, alongside the existing neural-network approach.
+
+The models were assessed using standardised cross-validation Mean Absolute Error (MAE).
+
+### 3.1 Cross-Validation Results
+
+| Function | Observations | GP CV MAE | NN CV MAE | Better Model |
+|---|---:|---:|---:|---|
+| 1 | 22 | 0.5204 | 0.8246 | GP |
+| 2 | 22 | 0.6073 | 0.6159 | GP |
+| 3 | 27 | 0.4965 | 0.5004 | GP |
+| 4 | 42 | 0.1486 | 0.1977 | GP |
+| 5 | 32 | 0.1507 | 0.1422 | NN |
+| 6 | 32 | 0.3412 | 0.3575 | GP |
+| 7 | 42 | 0.2809 | 0.3462 | GP |
+| 8 | 52 | 0.0766 | 0.2796 | GP |
+
+All values are reported on the standardised output scale used in this diagnostic comparison.
+
+The GP demonstrated lower cross-validation error for seven functions, while the NN performed slightly better for Function 5.
+
+**Function 8** showed the strongest GP validation performance, with an MAE of approximately 0.0766.
+
+Function 4 also showed relatively strong GP performance, although its large realised prediction error demonstrated that cross-validation did not guarantee accurate predictions for every new point.
+
+Function 5 showed close performance between the two models, supporting continued use of model agreement when selecting boundary candidates.
+
+Functions 2 and 3 had relatively similar GP and NN cross-validation errors, suggesting that neither model offered an overwhelming advantage.
+
+**Function 1** remained difficult to model despite the alternative kernel configuration.
+
+Its GP CV MAE of 0.5204 was lower than the NN error of 0.8246, but this did not provide convincing evidence that either model could reliably identify a substantially better region.
+
+### 3.2 Gaussian Process Kernel Behaviour
+
+The Matérn kernel allowed separate length scales across input dimensions.
+
+This differed from the earlier isotropic RBF approach and provided greater flexibility in representing functions that varied more strongly along particular dimensions.
+
+However, several fitted length scales reached the upper bound of 1000.
+
+This occurred in Functions 1, 2, 3, 5, 7 and 8.
+
+Such results suggested that the model was treating certain dimensions as relatively insensitive within the observed data.
+
+They did not necessarily indicate that the fitted model was unusable, but remained important diagnostics when interpreting its predictions.
+
+Functions 4 and 6 fitted without reported convergence warnings in this final diagnostic stage.
+
+Overall, the updated GP performed reasonably well for most functions, although the fitted kernel parameters and validation results continued to justify function-specific caution.
+
+## 4. Review Final Optimisation Progress
+
+The running-best observations and the number of queries since each function's last improvement were reviewed.
+
+This provided context for determining whether the final query should focus on exploiting an established region or investigating a less-explored alternative.
+
+| Function | Current Best | Queries Since Best | Assessment |
+|---|---:|---:|---|
+| 1 | ~0.000000 | 19 | No meaningful improvement |
+| 2 | 0.746962 | 7 | Extended period without improvement |
+| 3 | -0.000352 | 1 | Very recent improvement |
+| 4 | 0.622950 | 2 | Recently successful region |
+| 5 | 8662.482500 | 5 | Strong boundary result, now stable |
+| 6 | -0.239769 | 3 | Recent improvements followed by plateau |
+| 7 | 3.070097 | 1 | Very recent improvement |
+| 8 | 9.987419 | 1 | Very close to previous best |
+
+The results suggested that the functions were at different stages of optimisation.
+
+Functions 3, 4, 7 and 8 had achieved relatively recent improvements, making continued local refinement a reasonable strategy.
+
+Function 5 remained strongly concentrated around the upper boundary, although repeated nearby queries had failed to exceed its best.
+
+Functions 2 and 6 had gone several observations without improving, requiring careful consideration of whether further exploration was justified.
+
+Function 1 remained the principal exception because neither the historical results nor the surrogate models provided clear evidence of a reliably better region.
+
+Given that this was the final stage, the analysis placed greater emphasis on selecting candidates with a plausible opportunity to improve performance, rather than maximising information gain for subsequent rounds.
+
+## 5. Reassess PCA, Clustering and Neighbourhood Evidence
+
+The additional analytical methods introduced during Weeks 11 and 12 were reassessed using the updated datasets.
+
+These included PCA, K-Means clustering and nearest-neighbour analysis.
+
+The purpose was to determine whether the strongest observed regions remained supported by the broader structure of the data.
+
+### 5.1 Function-Specific Evidence
+
+**Function 1**
+
+The strongest PCA–output correlation was negligible, at approximately -0.045.
+
+K-Means identified four clusters with a silhouette score of approximately 0.397, but this did not reveal a clearly superior region.
+
+Neighbouring observations also produced outputs close to zero.
+
+PCA and clustering therefore continued to offer little practical guidance.
+
+**Function 2**
+
+The strongest PCA–output correlation was approximately -0.596.
+
+This provided moderate evidence of a relationship between input combinations and performance.
+
+However, candidate selection still depended primarily on surrogate predictions and observed neighbourhood performance.
+
+**Function 3**
+
+PCA and clustering offered some supporting information, but the function's narrow high-performing region and inconsistent surrogate reliability remained important concerns.
+
+Local refinement was therefore preferred over aggressive movement along a PCA direction.
+
+**Function 4**
+
+The PCA and neighbourhood evidence supported continued investigation near previously successful observations.
+
+However, the latest substantial prediction errors suggested that even candidates within this region could perform considerably worse than expected.
+
+**Function 5**
+
+PCA continued to reinforce the importance of the upper input boundary.
+
+The strongest observed output remained at `[1, 1, 1, 1]`.
+
+Clustering and nearby observations also supported this region, making a further boundary-focused candidate the most defensible approach.
+
+**Function 6**
+
+PCA, clustering and neighbourhood evidence continued to support a relatively small high-performing region.
+
+The latest unsuccessful query suggested that greater movement was not necessarily advantageous.
+
+**Function 7**
+
+The strongest observations remained concentrated around a relatively local region.
+
+PCA and the GP provided useful supporting evidence for further refinement.
+
+**Function 8**
+
+The strongest observations continued to occupy a consistent high-performing region.
+
+The GP's comparatively strong validation and realised accuracy supported selecting a candidate close to these observations.
+
+### 5.2 Overall Assessment
+
+PCA and clustering provided useful supplementary evidence, but neither method was treated as a direct optimiser.
+
+The final choices continued to depend primarily on observed performance, surrogate predictions, validation results and local uncertainty.
+
+These additional techniques were most useful where their findings agreed with evidence already provided by the GP, NN and historical observations.
+
+## 6. Develop Final Function-Specific Strategies
+
+The evidence accumulated throughout the project was used to select an approach for each function.
+
+| Function | Final Strategy | Main Reasoning |
+|---|---|---|
+| 1 | Cautious exploration and PI comparison | No reliable improvement signal |
+| 2 | NN-influenced local refinement | Stronger realised NN accuracy |
+| 3 | Conservative local refinement | Recent best, narrow region |
+| 4 | Prioritise model agreement | Large recent prediction errors |
+| 5 | Upper-boundary refinement | Strong historical boundary optimum |
+| 6 | GP/NN agreement-based refinement | Both models provide useful local guidance |
+| 7 | GP-weighted local refinement | Stronger GP realised accuracy |
+| 8 | GP/NN agreement with low uncertainty | Very strong existing result and GP reliability |
+
+This represented a continuation of the function-specific approach developed across the previous rounds.
+
+The final selections were not based on a single acquisition function or model.
+
+Instead, the reliability of each source of evidence was considered when comparing alternative candidates.
+
+## 7. Generate and Compare Final Candidate Alternatives
+
+Candidate sets were generated using several approaches, including:
+
+- Weighted GP/NN predictions based on model reliability.
+- GP-led recommendations.
+- NN-led recommendations.
+- Candidates selected for close GP/NN agreement.
+- Local refinement informed by PCA, clustering and observed neighbourhoods.
+
+For each candidate, the analysis considered predicted output, GP uncertainty, disagreement between the two surrogate models and distance to the nearest existing observation.
+
+Greater model agreement was considered useful evidence, although it did not guarantee a higher actual output.
+
+### 7.1 Key Comparisons
+
+**Function 1**
+
+The models continued to predict outputs extremely close to zero.
+
+A candidate with strong model agreement was initially favoured, but further PI and EI analysis was required because model agreement alone did not imply an improvement.
+
+**Function 2**
+
+The weighted candidate offered a predicted output of approximately 0.6471.
+
+Although below the existing best of 0.7470, GP/NN disagreement was relatively small.
+
+This provided a reasonable basis for local refinement rather than moving to a much more uncertain region.
+
+**Function 3**
+
+The preferred local candidate had a weighted prediction of approximately -0.00346.
+
+Its model disagreement was relatively small at approximately 0.00249.
+
+Although the prediction remained below the current best, it provided a conservative option within a recently successful region.
+
+**Function 4**
+
+The agreement-based candidate produced a weighted prediction of approximately 0.4685.
+
+This remained below the current best of 0.6230, but GP and NN predictions differed by only approximately 0.00105.
+
+Given the large realised prediction errors observed in the latest round, model agreement was preferred over more optimistic alternatives.
+
+**Function 5**
+
+Both models favoured the same upper-boundary candidate.
+
+Its weighted predicted output was approximately 8161.61, below the current best of 8662.48.
+
+Nevertheless, the historical evidence strongly supported maintaining a boundary-focused strategy.
+
+**Function 6**
+
+The weighted candidate produced a predicted output of approximately -0.2530.
+
+The GP and NN predictions were extremely close, with a disagreement of approximately 0.00110.
+
+This supported continued local refinement despite the prediction remaining slightly below the current best.
+
+**Function 7**
+
+The preferred candidate had a weighted prediction of approximately 3.0573.
+
+Although slightly below the current best of 3.0701, the GP's stronger historical performance supported its selection.
+
+**Function 8**
+
+The agreement-based candidate produced a weighted prediction of approximately 9.9916.
+
+This exceeded the current best of 9.9874.
+
+GP/NN disagreement was exceptionally small at approximately 0.000017, while GP uncertainty was approximately 0.00128.
+
+This represented one of the strongest final candidate recommendations.
+
+## 8. Evaluate Probability of Improvement and Expected Improvement
+
+As an additional final check, the selected candidates were reassessed using Probability of Improvement (PI), Expected Improvement (EI) and a conservative prediction score.
+
+PI estimates the probability that a candidate's output will exceed the current best under the GP predictive distribution.
+
+EI considers both the probability and expected magnitude of potential improvement.
+
+The conservative score was calculated by subtracting the GP's predictive standard deviation from its predicted mean.
+
+These measures offered different perspectives on candidate quality.
+
+A high EI could result from substantial uncertainty rather than a strong predicted mean, while a high PI could favour a candidate offering only a very small improvement.
+
+### 8.1 Final Acquisition Comparison
+
+| Function | Current Candidate PI | Current Candidate EI | Main Finding |
+|---|---:|---:|---|
+| 1 | 48.5% | 0.000159 | Alternative has higher PI but tiny expected gain |
+| 2 | 5.0% | 0.001508 | Higher EI alternatives rely on uncertainty |
+| 3 | 38.5% | 0.001715 | Higher PI alternative has substantial NN disagreement |
+| 4 | 23.2% | 0.028466 | Higher EI alternative has weaker NN support |
+| 5 | 9.6% | 11.62 | Existing selection remains favoured |
+| 6 | 35.5% | 0.00823 | Higher EI alternative relies more on uncertainty |
+| 7 | 97.1% | Approximately 0.057 | Strong probability under GP |
+| 8 | High | Small positive EI | Strong GP/NN agreement and low uncertainty |
+
+The additional comparison reinforced the value of considering several acquisition measures rather than automatically selecting the candidate with the highest predicted output.
+
+### 8.2 Function 1 — Final PI-Based Adjustment
+
+Function 1 was the clearest case in which the additional acquisition analysis affected the final submission.
+
+The initially selected candidate was:
+
+`[0.970964, 0.144749]`
+
+Its predicted output was slightly negative, with a PI of approximately 48.5%.
+
+An alternative local candidate was identified:
+
+`[0.986278, 0.694632]`
+
+This candidate had:
+
+- GP predicted output of approximately 0.0000126.
+- NN predicted output of approximately 0.0000936.
+- GP uncertainty of approximately 0.0000090.
+- PI of approximately 91.9%.
+- EI of approximately 0.0000129.
+- Nearest-observation distance of approximately 0.1277.
+
+The alternative offered a substantially higher estimated probability of improvement, although the magnitude of any improvement remained extremely small.
+
+The final submission summary therefore used `[0.986278, 0.694632]` rather than the initially selected point.
+
+This change did not resolve Function 1's underlying modelling difficulties, but it provided a more exploitation-focused final selection.
+
+### 8.3 Functions 2–4
+
+For Function 2, candidates with higher EI generally had substantially greater GP uncertainty and weaker predicted performance.
+
+The more conservative weighted candidate was therefore retained.
+
+For Function 3, a higher-EI candidate was available, but the GP predicted a positive output while the NN predicted approximately -0.0386.
+
+This disagreement reduced confidence in the apparent improvement.
+
+The more conservative local candidate was retained.
+
+Function 4 also had higher-EI alternatives, but these involved greater uncertainty and considerably weaker NN predictions.
+
+Given the latest substantial model errors, the agreement-based candidate remained preferable.
+
+### 8.4 Functions 5–8
+
+For Function 5, the existing boundary candidate remained the preferred option under the acquisition comparison.
+
+Function 6's higher-EI alternatives relied more heavily on uncertainty, while both models predicted weaker performance than for the existing candidate.
+
+Function 7's selected candidate retained a strong probability of improvement under the GP, supporting its inclusion.
+
+Function 8's candidate was particularly encouraging because it combined a slightly higher predicted output than the existing best with extremely close GP/NN agreement and low uncertainty.
+
+Overall, the PI/EI reassessment supported retaining the existing selections for Functions 2–8 while making a final adjustment to Function 1.
+
+## 9. Final Week 13 Submission Points
+
+The final submission candidates were validated for correct dimensionality and permitted input bounds.
+
+Each function's selected point remained within the original `[0, 1]` search space.
+
+The final points below follow the submission summary at the end of the Week 13 notebook.
+
+### Final Proposed Queries
+
+| Function | Final Proposed Point |
+|---|---|
+| 1 | `[0.986278, 0.694632]` |
+| 2 | `[0.705356, 0.289644]` |
+| 3 | `[0.453820, 0.535334, 0.457166]` |
+| 4 | `[0.378667, 0.370356, 0.358613, 0.401134]` |
+| 5 | `[1.000000, 1.000000, 1.000000, 0.994987]` |
+| 6 | `[0.427111, 0.396525, 0.553035, 0.815857, 0.000000]` |
+| 7 | `[0.134543, 0.252076, 0.500741, 0.287015, 0.329668, 0.686644]` |
+| 8 | `[0.041810, 0.135867, 0.145837, 0.154986, 0.783138, 0.496861, 0.183924, 0.693244]` |
+
+### Submission Format
+
+    Function 1: 0.986278-0.694632
+    Function 2: 0.705356-0.289644
+    Function 3: 0.453820-0.535334-0.457166
+    Function 4: 0.378667-0.370356-0.358613-0.401134
+    Function 5: 1.000000-1.000000-1.000000-0.994987
+    Function 6: 0.427111-0.396525-0.553035-0.815857-0.000000
+    Function 7: 0.134543-0.252076-0.500741-0.287015-0.329668-0.686644
+    Function 8: 0.041810-0.135867-0.145837-0.154986-0.783138-0.496861-0.183924-0.693244
+
+The final submissions reflected different levels of exploration and exploitation.
+
+Function 1 used an adjusted PI-based candidate because its historical observations provided little useful evidence of meaningful improvement.
+
+Functions 2, 3 and 6 prioritised relatively conservative local refinement supported by GP and NN comparisons.
+
+Function 4 selected a candidate with strong model agreement following substantial realised prediction errors.
+
+Function 5 remained concentrated near its established upper-boundary optimum.
+
+Function 7 used a GP-weighted recommendation within its high-performing region.
+
+Function 8 selected a candidate offering a modest predicted improvement alongside particularly strong model agreement and low GP uncertainty.
+
+These selections represent the final proposed queries. Their actual outputs were not yet available within the Week 13 notebook.
+
+## 10. Overall Optimisation Performance
+
+The complete optimisation history was assessed to evaluate the progress achieved across the eight functions.
+
+For each function, the initial best observation was compared with the highest output achieved during the project.
+
+The analysis also recorded the total number of observations, the number of new best observations and the number of observations since the latest improvement.
+
+### 10.1 Overall Performance Summary
+
+| Function | Initial Best | Final Observed Best | Absolute Improvement | Total Observations |
+|---|---:|---:|---:|---:|
+| 1 | ~0.000000 | ~0.000000 | ~0.000000 | 22 |
+| 2 | 0.611205 | 0.746962 | +0.135757 | 22 |
+| 3 | -0.034835 | -0.000352 | +0.034483 | 27 |
+| 4 | -10.069633 | 0.622950 | +10.692583 | 42 |
+| 5 | 258.370525 | 8662.482500 | +8404.111975 | 32 |
+| 6 | -0.714265 | -0.239769 | +0.474496 | 32 |
+| 7 | 1.364968 | 3.070097 | +1.705129 | 42 |
+| 8 | 8.606117 | 9.987419 | +1.381302 | 52 |
+
+### 10.2 Percentage Improvements
+
+For functions with positive initial outputs, percentage improvement was calculated relative to the initial best.
+
+For functions with negative initial outputs, the percentage change was interpreted relative to the magnitude of the initial result.
+
+| Function | Reported Improvement |
+|---|---:|
+| 1 | Not meaningful due to near-zero baseline |
+| 2 | +22.21% |
+| 3 | +98.99% relative to initial magnitude |
+| 4 | +106.19% relative to initial magnitude |
+| 5 | +3252.74% |
+| 6 | +66.43% relative to initial magnitude |
+| 7 | +124.92% |
+| 8 | +16.05% |
+
+The results demonstrated substantial variation in optimisation progress.
+
+**Function 5** achieved the largest numerical improvement, increasing from approximately 258.37 to 8662.48.
+
+This reflected the successful identification of a strong region near the upper input boundary.
+
+**Function 4** improved from a substantially negative initial best to a positive maximum of approximately 0.6230.
+
+**Function 7** more than doubled its initial best output, increasing from approximately 1.3650 to 3.0701.
+
+**Function 8** improved from 8.6061 to 9.9874, approaching an observed output of 10.
+
+**Function 3** moved very close to zero, improving from -0.03484 to -0.000352.
+
+**Function 6** also made meaningful progress, reducing the magnitude of its negative best output.
+
+Function 2 achieved a more modest improvement of 22.21%.
+
+Function 1 remained the only function without a meaningful improvement over its initial observations.
+
+### 10.3 Improvement Frequency
+
+| Function | New Bests After Initial Data | Observations Since Last Best |
+|---|---:|---:|
+| 1 | 0 | 19 |
+| 2 | 1 | 7 |
+| 3 | 6 | 1 |
+| 4 | 9 | 2 |
+| 5 | 9 | 5 |
+| 6 | 5 | 3 |
+| 7 | 6 | 1 |
+| 8 | 8 | 1 |
+
+Across the eight functions, **44 new best observations** were recorded after the initial datasets.
+
+**Seven of the eight functions improved** over the course of the project.
+
+Functions 4 and 5 recorded the largest number of improvements, with nine each.
+
+Function 8 recorded eight improvements, while Functions 3 and 7 recorded six each.
+
+Function 6 recorded five improvements, Function 2 recorded one, and Function 1 recorded none.
+
+These differences demonstrated that the optimisation strategies had varied considerably in effectiveness across functions.
+
+The results also highlighted how the frequency of improvements could differ from their magnitude.
+
+For example, Function 8 achieved several relatively small later improvements, while Function 5 experienced much larger changes in output.
+
+Overall, the results provided evidence that the iterative modelling and candidate-selection process had successfully improved most functions, although the extent of improvement varied substantially.
+
+## 11. Review the Evolution of the Optimisation Strategy
+
+The project developed progressively over the weekly rounds, with new techniques introduced in response to observed limitations.
+
+### Weeks 1–4: Establishing and Refining the GP Framework
+
+The initial approach used Gaussian Process regression with an RBF kernel and UCB acquisition function.
+
+The early rounds revealed that some functions were modelled more effectively than others.
+
+Functions 1 and 6 initially experienced particularly problematic GP behaviour, leading to more exploratory selections and investigations of alternative methods.
+
+The acquisition-function analysis was subsequently expanded to compare different UCB exploration parameters and Expected Improvement settings.
+
+These experiments demonstrated that a single acquisition configuration was unlikely to perform equally well across all eight functions.
+
+### Weeks 5–8: Introducing Neural Networks and Model Comparison
+
+Neural-network ensembles were introduced as an additional surrogate model.
+
+Their predictions were compared with the GP recommendations, while LOOCV was used to assess generalisation performance.
+
+This provided an alternative source of information where GP predictions appeared unreliable.
+
+The approach evolved towards comparing model agreement, historical observations, uncertainty and the performance of nearby points.
+
+Function-specific strategies became increasingly important.
+
+### Weeks 9–10: Assessing Progress and Prediction Reliability
+
+The optimisation histories were analysed to investigate improvement frequency, diminishing returns and the relationship between additional observations and performance.
+
+Multi-radius local refinement was used to compare candidate movements at different distances from the best-known observations.
+
+Realised prediction accuracy also became an important additional diagnostic.
+
+Comparing predicted outputs with actual results helped identify cases where a model performed reasonably under cross-validation but made an inaccurate prediction for the submitted candidate.
+
+This strengthened the evidence-based selection process.
+
+### Week 11: Introducing K-Means Clustering
+
+K-Means clustering was introduced to identify groups of observations within the input spaces.
+
+Silhouette scores and cluster output performance were examined to determine whether the clustering structure was meaningful.
+
+The results varied by function.
+
+Clustering was particularly useful as supplementary evidence for identifying promising regions, but was not consistently reliable enough to replace GP or NN guidance.
+
+### Week 12: Introducing Principal Component Analysis
+
+PCA was used to investigate the main directions of input variation and their relationships with observed outputs.
+
+Several functions showed strong correlations between principal-component scores and performance.
+
+However, model predictions did not always support aggressive movements along favourable PCA directions.
+
+PCA therefore contributed to candidate generation and interpretation, while final selections continued to balance surrogate predictions, local performance and novelty.
+
+### Week 13: Final Model Evaluation and Candidate Selection
+
+The final round combined the approaches developed throughout the project.
+
+Realised prediction accuracy, cross-validation, alternative GP kernels, PCA, clustering, neighbourhood evidence and model agreement were used to evaluate candidates.
+
+PI and EI were also used to perform a final assessment of improvement potential.
+
+The resulting selections reflected the central methodological lesson of the capstone: **the most appropriate optimisation strategy depended on the function being investigated.**
+
+## 12. Exploration, Exploitation and Sequential Decision-Making
+
+The project also provided an opportunity to reflect on the exploration–exploitation trade-off.
+
+At each round, the available observations were used to select a new query point.
+
+The resulting output then provided additional evidence for updating the models and refining subsequent decisions.
+
+This is closely related to the sequential decision-making perspective used in reinforcement learning.
+
+However, the capstone implemented Bayesian optimisation rather than a formal reinforcement-learning algorithm.
+
+The process did not involve training a policy or value function through a reinforcement-learning method.
+
+Instead, it used surrogate models and acquisition functions to determine where additional observations were most valuable.
+
+### 12.1 Exploration
+
+Exploration was particularly important in the earlier rounds, when the functions were poorly understood.
+
+It remained relevant for functions where the models struggled to identify promising regions.
+
+Function 1 was the clearest example.
+
+Because neither GP nor NN modelling consistently identified improvements, space-filling exploration was used in several rounds to increase coverage of the input space.
+
+### 12.2 Exploitation
+
+Exploitation became increasingly important as strong-performing regions were identified.
+
+Function 5 demonstrated this clearly, with its strongest results concentrated near `[1, 1, 1, 1]`.
+
+Functions 4, 6, 7 and 8 also benefited from local refinement around established high-performing observations.
+
+The challenge was determining how far a candidate should move from a successful observation.
+
+Very small movements could provide limited new information, while larger movements sometimes produced substantially weaker outputs.
+
+### 12.3 Learning From Feedback
+
+The weekly outputs provided feedback about the effectiveness of earlier decisions.
+
+An important development was the explicit comparison of surrogate predictions with realised outcomes.
+
+This made it possible to reassess which models were providing useful guidance.
+
+The approach became progressively less dependent on individual predictions and more focused on combining several sources of evidence.
+
+### 12.4 Final-Round Priorities
+
+As the project approached its conclusion, the value of exploration changed.
+
+Earlier in the project, exploratory queries could improve model understanding and inform future decisions.
+
+In the final round, with fewer opportunities remaining, the emphasis shifted towards candidates with a realistic chance of improving the highest observed outputs.
+
+This justified the additional PI and EI comparisons and the increased emphasis on reliable local predictions.
+
+## 13. Final Reflection
+
+The capstone demonstrated the challenges of optimising several unknown functions with different dimensionalities, output scales and degrees of complexity.
+
+The initial GP/UCB framework provided a useful baseline, but its effectiveness varied considerably across functions.
+
+Additional techniques were introduced progressively to address these limitations rather than replacing the original approach entirely.
+
+The neural-network ensembles provided valuable alternative predictions, particularly where the GP behaved poorly or when historical realised accuracy favoured the NN.
+
+However, NN predictions were also occasionally overoptimistic, demonstrating the need for cross-validation and comparison with actual outcomes.
+
+The introduction of local refinement was particularly important. Several functions achieved their strongest improvements through targeted movements around previously successful observations.
+
+PCA and K-Means clustering provided additional information about promising regions, but their usefulness depended on the structure of the individual function.
+
+The final analysis also reinforced the importance of distinguishing between model validation performance and realised prediction accuracy. A surrogate could demonstrate relatively strong cross-validation performance while still making an inaccurate prediction for a particular new candidate.
+
+Across the project, seven of the eight functions improved over their initial best observations, with 44 new best observations recorded.
+
+Functions 4, 5, 7 and 8 demonstrated particularly encouraging progress, although for different reasons.
+
+Function 5 achieved the largest numerical improvement and demonstrated the value of identifying a strong boundary region.
+
+Function 4 moved from a substantially negative initial best to a positive maximum.
+
+Function 7 more than doubled its initial best output, while Function 8 approached an observed value of 10 through successive smaller improvements.
+
+Function 1 remained the principal unresolved challenge, demonstrating that additional observations and alternative modelling methods do not necessarily guarantee meaningful optimisation progress.
+
+The most important lesson was that **no single model, acquisition function or search strategy was consistently best across all eight problems**.
+
+The strongest approach was to evaluate each function separately, combine multiple forms of evidence and adapt the balance between exploration and exploitation as new observations became available.
+
+Overall, the project provided practical experience of Bayesian optimisation, Gaussian Process regression, neural networks, model validation, unsupervised learning, dimensionality reduction and sequential decision-making under uncertainty.
+
+---
+
+**Associated code:** `Week_13.ipynb`
+
